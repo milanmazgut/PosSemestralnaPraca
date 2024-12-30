@@ -1,6 +1,6 @@
 #include "dice.h"
 
-void dice_init(dice* this,int capacity, int* probabilities) {
+void init_dice(dice* this,int capacity, int* probabilities) {
     srand(time(NULL));
     for (int i = 0; i < ANIMAL_COUNT; ++i) {
         this->probabilities[i] = probabilities[i];
@@ -8,7 +8,7 @@ void dice_init(dice* this,int capacity, int* probabilities) {
     }
 }
 
-void dice_roll(dice* this, animalTypesDice* type) {
+void roll_dice(dice* this, animalTypesDice* type) {
     int random = rand() % this->capacity; 
     int sum = 0;
 

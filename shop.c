@@ -14,5 +14,5 @@ void exchange_shop(shop *this, player* player, animalTypesShop in, animalTypesSh
     } else {
         player->playerAnimals[in] -= 1;
         player->playerAnimals[out] += this->prices[out];
-    } 
+    }
 }

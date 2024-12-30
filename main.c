@@ -5,6 +5,6 @@
 #include <stdbool.h>
 
 int main() {
-    printf("Hello, Kwassay!\n");
+    printf("Hello, World!\n");
     return 0;
 }

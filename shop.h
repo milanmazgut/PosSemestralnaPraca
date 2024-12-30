@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "enums.h"
+#include "player.h"
 
 typedef struct {
     int prices[ANIMAL_COUNT_SHOP];
@@ -13,8 +14,7 @@ typedef struct {
 
 void init_shop(shop* shopPtr, int* prices, int* animalCounts);
 
-void exchange_shop(shop* shopPtr, animalTypesShop in, animalTypesShop out);
-
+void exchange_shop(shop* shopPtr, player* player, animalTypesShop in, animalTypesShop out);
 
 
 #endif

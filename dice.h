@@ -4,17 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include "enums.h"
 
-typedef enum {
-    RABBIT,
-    SHEEP,
-    PIG,
-    COW,
-    HORSE,
-    FOX,
-    WOLF,
-    ANIMAL_COUNT 
-} animalTypes;
+
 
 typedef struct {
     int capacity;                  
@@ -23,6 +15,6 @@ typedef struct {
 
 
 void dice_init(dice* dicePtr, int capacity, int* probabilities); 
-void dice_roll(dice* dicePtr, animalTypes* type);                 
+void dice_roll(dice* dicePtr, animalTypesDice* type);                 
 
 #endif

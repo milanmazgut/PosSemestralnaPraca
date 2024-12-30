@@ -1,10 +1,10 @@
 #include "player.h"
-void init_player(Player* this) {
+void player_init(Player* this) {
     for(int i = 0; i < ANIMAL_COUNT_SHOP; i++) {
         this->playerAnimals[i] = 0;
     }
 }
 
-void destroy_player(Player* this) {
+void player_destroy(Player* this) {
     free(this->playerAnimals);
 }

@@ -6,11 +6,11 @@
 #include <time.h>
 #include "enums.h"
 
-typedef struct Player{
+typedef struct player{
     int playerAnimals[ANIMAL_COUNT_SHOP];
-} Player;
+} player;
 
-void init_player(Player* this);
-void destroy_player(Player* this);
+void player_init(player* this);
+void player_destroy(player* this);
 
 #endif

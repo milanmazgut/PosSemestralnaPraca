@@ -12,9 +12,9 @@ typedef struct {
     int allAnimals[ANIMAL_COUNT_SHOP];
 } shop;
 
-void init_shop(shop* shopPtr, int* prices, int* animalCounts);
-
-void exchange_shop(shop* shopPtr, player* player, animalTypesShop in, animalTypesShop out);
+void shop_init(shop* this, int* prices, int* animalCounts);
+void exchange_shop(shop* this, player* player, animalTypesShop in, animalTypesShop out);
+void shop_destroy(shop* this);
 
 
 #endif

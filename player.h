@@ -10,7 +10,7 @@ typedef struct player{
     int playerAnimals[ANIMAL_COUNT_SHOP];
 } player;
 
-void player_init(player* this);
-void player_destroy(player* this);
+void player_init(player* playerPtr);
+void player_destroy(player* playerPtr);
 
 #endif

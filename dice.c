@@ -24,5 +24,4 @@ void roll_dice(dice* this, animalTypesDice* type) {
 
 void dice_destroy(dice* this) {
     free(this->probabilities);
-    free(this->capacity);
 }

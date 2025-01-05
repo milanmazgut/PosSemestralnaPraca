@@ -32,14 +32,14 @@ void changeAnimalOwnership(game* this, player* currentPlayer, int type, int coun
     currentPlayer->playerAnimals[type] += count;
 }
 
-void player_roll_dice(game *this, player* currentPlayer) {
+void player_roll_dice(syn_game *this, player* currentPlayer) {
     animalTypesDice dice_1;
     animalTypesDice dice_2;
-    roll_dice(&this->dice_1, &dice_1);
-    roll_dice(&this->dice_2, &dice_2);
+    roll_dice(&this->this->dice_1, &dice_1);
+    roll_dice(&this->this->dice_2, &dice_2);
 
     if ( dice_1 == dice_2) {
-        changeAnimalOwnership(this, currentPlayer, dice_1, 1);
+        changeAnimalOwnership(this->game, currentPlayer, dice_1, 1);
     } else {
         if(dice_1 == FOX || dice_2 == FOX) {
             if (currentPlayer->playerAnimals[SMALL_DOG] == 1) {
@@ -60,9 +60,9 @@ void player_roll_dice(game *this, player* currentPlayer) {
     }
 }
 
-_Bool exchangeAnimal(game *this, player* currentPlayer, animalTypesShop in, animalTypesShop out) {
-    if (currentPlayer->playerAnimals[in] >= this->shop.prices[0]) {
-        exchange_shop(&this->shop, currentPlayer, in, out);
+_Bool exchangeAnimal(syn_game *this, player* currentPlayer, animalTypesShop in, animalTypesShop out) {
+    if (currentPlayer->playerAnimals[in] >= this->game->shop.prices[0]) {
+        exchange_shop(&this->game->shop, currentPlayer, in, out);
         return true;
     } else {
         return false;

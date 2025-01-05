@@ -30,7 +30,7 @@ typedef struct syn_game {
 
 void game_init(game* gamePtr, player* players, int playerCount, shop* shop);
 void player_roll_dice(game *gamePtr, player* currentPlayer);
-void syn_game_init(syn_game* this, int number_of_players);
-void syn_game_destroy(syn_game* this);
+void syn_game_init(syn_game* syn_gamePtr, int number_of_players);
+void syn_game_destroy(syn_game* syn_gamePtr);
 
 #endif

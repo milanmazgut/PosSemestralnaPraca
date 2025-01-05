@@ -3,6 +3,7 @@
 #include "enums.h"
 #include "player.h"
 #include "shop.h"
+#include <stdio.h>
 
 void init_game(game *this, player* players, int playerCount, shop* shop) {
     int CAPACITY = 12;
@@ -21,8 +22,12 @@ void init_game(game *this, player* players, int playerCount, shop* shop) {
 }
 
 void changeAnimalOwnership(game* this, player* currentPlayer, int type, int count) {
-    this->shop.allAnimals[type] -= count;
-    currentPlayer->playerAnimals[type] += count;
+    if (this->shop.allAnimals[type] > 0) {
+        this->shop.allAnimals[type] -= count;
+        currentPlayer->playerAnimals[type] += count;
+    } else {
+        printf("There aren't enough animals of this type.\n");
+    }
 }
 
 void player_roll_dice(game *this, player* currentPlayer) {
@@ -54,10 +59,16 @@ void player_roll_dice(game *this, player* currentPlayer) {
 }
 
 _Bool exchangeAnimal(game *this, player* currentPlayer, animalTypesShop in, animalTypesShop out) {
-    if (currentPlayer->playerAnimals[in] >= this->shop.prices[0]) {
+    if (currentPlayer->playerAnimals[in] >= this->shop.prices[out]) {
         exchange_shop(&this->shop, currentPlayer, in, out);
         return true;
     } else {
         return false;
+    }
+}
+
+void endOfTurnAnimalMultiplication(game *this, player* currentPlayer) {
+    for (int i = 0; i < ANIMAL_COUNT_SHOP; i++) {
+        changeAnimalOwnership(this, currentPlayer, i, currentPlayer->playerAnimals[i]/2);
     }
 }

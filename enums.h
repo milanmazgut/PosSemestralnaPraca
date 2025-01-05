@@ -23,4 +23,16 @@ typedef enum {
     ANIMAL_COUNT_SHOP
 } animalTypesShop;
 
+const char *animalNames[] = {
+    [RABBIT] = "Rabbit",
+    [SHEEP] = "Sheep",
+    [PIG] = "Pig",
+    [COW] = "Cow",
+    [HORSE] = "Horse",
+    [SMALL_DOG] = "Small Dog",
+    [BIG_DOG] = "Big Dog",
+    [FOX] = "Fox",
+    [WOLF] = "Wolf"
+};
+
 #endif

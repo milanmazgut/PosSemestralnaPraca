@@ -6,14 +6,25 @@ void shop_init(shop* this , int *prices, int *animalCounts) {
         this->allAnimals[i] = animalCounts[i];
     }
 }
+// -count for selling to shop, +count for buying from shop
+void change_animal_ownership(shop* this, player* currentPlayer, int type, int count) {
+    if (this->allAnimals[type] > 0) {
+        this->allAnimals[type] -= count;
+        currentPlayer->playerAnimals[type] += count;
+    } else {
+        currentPlayer->playerAnimals[type] += this->allAnimals[type];
+        printf("There aren't enough %s. Only %d were added.\n", animalNames[type], this->allAnimals[type]);
+        this->allAnimals[type] == 0;
+    }
+}
 
 void exchange_shop(shop *this, player* player, animalTypesShop in, animalTypesShop out) {
     if (in < out) {
-        player->playerAnimals[in] -= this->prices[in];
-        player->playerAnimals[out] += 1;
+        change_animal_ownership(this, player, in, -this->prices[in]);
+        change_animal_ownership(this, player, out, 1);
     } else {
-        player->playerAnimals[in] -= 1;
-        player->playerAnimals[out] += this->prices[out];
+        change_animal_ownership(this, player, in, -1);
+        change_animal_ownership(this, player, out, +this->prices[out]);
     }
 }
 

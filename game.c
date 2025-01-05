@@ -21,14 +21,14 @@ void init_game(game *this, player* players, int playerCount, shop* shop) {
     shop_init(&this->shop, prices, animalCounts);
 }
 
-void changeAnimalOwnership(game* this, player* currentPlayer, int type, int count) {
-    if (this->shop.allAnimals[type] > 0) {
-        this->shop.allAnimals[type] -= count;
-        currentPlayer->playerAnimals[type] += count;
-    } else {
-        printf("There aren't enough animals of this type.\n");
-    }
-}
+// void changeAnimalOwnership(game* this, player* currentPlayer, int type, int count) {
+//     if (this->shop.allAnimals[type] > 0) {
+//         this->shop.allAnimals[type] -= count;
+//         currentPlayer->playerAnimals[type] += count;
+//     } else {
+//         printf("There aren't enough animals of this type.\n");
+//     }
+// }
 
 void player_roll_dice(syn_game *this, player* currentPlayer) {
     animalTypesDice dice_1;
@@ -37,29 +37,29 @@ void player_roll_dice(syn_game *this, player* currentPlayer) {
     roll_dice(&this->this->dice_2, &dice_2);
 
     if ( dice_1 == dice_2) {
-        changeAnimalOwnership(this->game, currentPlayer, dice_1, 1);
+        change_animal_ownership(&this->game.shop, currentPlayer, dice_1, 1);
     } else {
         if(dice_1 == FOX || dice_2 == FOX) {
             if (currentPlayer->playerAnimals[SMALL_DOG] == 1) {
-                changeAnimalOwnership(this, currentPlayer, SMALL_DOG, -1);
+                change_animal_ownership(&this->game.shop, currentPlayer, SMALL_DOG, -1);
             } else {
-                changeAnimalOwnership(this, currentPlayer, RABBIT, -currentPlayer->playerAnimals[RABBIT]);
+                change_animal_ownership(&this->game.shop, currentPlayer, RABBIT, -currentPlayer->playerAnimals[RABBIT]);
             }
         }
         if(dice_1 == WOLF || dice_2 == WOLF) {
             if (currentPlayer->playerAnimals[BIG_DOG] == 1) {
-                changeAnimalOwnership(this, currentPlayer, BIG_DOG, -1);
+                change_animal_ownership(&this->game.shop, currentPlayer, BIG_DOG, -1);
             } else {
-                changeAnimalOwnership(this, currentPlayer, SHEEP,currentPlayer->playerAnimals[SHEEP]);
-                changeAnimalOwnership(this, currentPlayer, PIG,currentPlayer->playerAnimals[PIG]);
-                changeAnimalOwnership(this, currentPlayer, COW,currentPlayer->playerAnimals[COW]);
+                change_animal_ownership(&this->game.shop, currentPlayer, SHEEP,currentPlayer->playerAnimals[SHEEP]);
+                change_animal_ownership(&this->game.shop, currentPlayer, PIG,currentPlayer->playerAnimals[PIG]);
+                change_animal_ownership(&this->game.shop, currentPlayer, COW,currentPlayer->playerAnimals[COW]);
             }
         }
     }
 }
 
-_Bool exchangeAnimal(syn_game *this, player* currentPlayer, animalTypesShop in, animalTypesShop out) {
-    if (currentPlayer->playerAnimals[in] >= this->game->shop.prices[0]) {
+_Bool exchange_animal(syn_game *this, player* currentPlayer, animalTypesShop in, animalTypesShop out) {
+    if (currentPlayer->playerAnimals[in] >= this->game->shop.prices[out]) {
         exchange_shop(&this->game->shop, currentPlayer, in, out);
         return true;
     } else {
@@ -67,9 +67,9 @@ _Bool exchangeAnimal(syn_game *this, player* currentPlayer, animalTypesShop in, 
     }
 }
 
-void endOfTurnAnimalMultiplication(game *this, player* currentPlayer) {
+void end_of_turn_animal_multiplication(game *this, player* currentPlayer) {
     for (int i = 0; i < ANIMAL_COUNT_SHOP; i++) {
-        changeAnimalOwnership(this, currentPlayer, i, currentPlayer->playerAnimals[i]/2);
+        change_animal_ownership(&this->game.shop, currentPlayer, i, currentPlayer->playerAnimals[i]/2);
     }
 }
 

@@ -14,6 +14,7 @@ typedef struct {
 
 void shop_init(shop* shopPtr, int* prices, int* animalCounts);
 void exchange_shop(shop* shopPtr, player* player, animalTypesShop in, animalTypesShop out);
+void change_animal_ownership(shop* shopPtr, player* currentPlayer, int type, int count);
 void shop_destroy(shop* shopPtr);
 
 

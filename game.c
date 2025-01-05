@@ -30,14 +30,14 @@ void changeAnimalOwnership(game* this, player* currentPlayer, int type, int coun
     }
 }
 
-void player_roll_dice(game *this, player* currentPlayer) {
+void player_roll_dice(syn_game *this, player* currentPlayer) {
     animalTypesDice dice_1;
     animalTypesDice dice_2;
-    roll_dice(&this->dice_1, &dice_1);
-    roll_dice(&this->dice_2, &dice_2);
+    roll_dice(&this->this->dice_1, &dice_1);
+    roll_dice(&this->this->dice_2, &dice_2);
 
-    if (dice_1 == dice_2) {
-        changeAnimalOwnership(this, currentPlayer, dice_1, 1);
+    if ( dice_1 == dice_2) {
+        changeAnimalOwnership(this->game, currentPlayer, dice_1, 1);
     } else {
         if(dice_1 == FOX || dice_2 == FOX) {
             if (currentPlayer->playerAnimals[SMALL_DOG] == 1) {
@@ -58,9 +58,9 @@ void player_roll_dice(game *this, player* currentPlayer) {
     }
 }
 
-_Bool exchangeAnimal(game *this, player* currentPlayer, animalTypesShop in, animalTypesShop out) {
-    if (currentPlayer->playerAnimals[in] >= this->shop.prices[out]) {
-        exchange_shop(&this->shop, currentPlayer, in, out);
+_Bool exchangeAnimal(syn_game *this, player* currentPlayer, animalTypesShop in, animalTypesShop out) {
+    if (currentPlayer->playerAnimals[in] >= this->game->shop.prices[0]) {
+        exchange_shop(&this->game->shop, currentPlayer, in, out);
         return true;
     } else {
         return false;
@@ -71,4 +71,29 @@ void endOfTurnAnimalMultiplication(game *this, player* currentPlayer) {
     for (int i = 0; i < ANIMAL_COUNT_SHOP; i++) {
         changeAnimalOwnership(this, currentPlayer, i, currentPlayer->playerAnimals[i]/2);
     }
+}
+
+//Synchronization part
+void syn_game_init(syn_game* this, int number_of_players) {
+    this->number_of_players = number_of_players;
+    this->current_index = 0;
+    pthread_mutex_init(&this->mut, NULL);
+    players_cond = malloc(sizeof(pthread_cond_t) * this->number_of_players);
+    
+    for(int i = 0; i < this->number_of_players; ++i) {
+        pthread_cond_init(&this->players_cond[i], NULL);
+    }
+    
+    game_init(this->game, this->number_of_players)
+
+}
+
+void syn_game_destroy(syn_game* this) {
+    pthread_mutex_destroy(&this->mut);
+    for(int i = 0; i < this->number_of_players; ++i) {
+        pthread_cond_destroy(&this->players_cond[i]);
+        destroy_player(&players[i]);
+    }
+    free(players_cond);
+    free(players);
 }

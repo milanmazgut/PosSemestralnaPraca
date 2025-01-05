@@ -22,9 +22,11 @@ void exchange_shop(shop *this, player* player, animalTypesShop in, animalTypesSh
     if (in < out) {
         change_animal_ownership(this, player, in, -this->prices[in]);
         change_animal_ownership(this, player, out, 1);
+        printf("You have exchanged %s {%d} for %s {%d}.\n", animalNames[in], this->prices[in], animalNames[out], 1);
     } else {
         change_animal_ownership(this, player, in, -1);
-        change_animal_ownership(this, player, out, +this->prices[out]);
+        change_animal_ownership(this, player, out, +this->prices[out]); 
+        printf("You have exchanged %s {%d} for %s {%d}.\n", animalNames[in], 1, animalNames[out], this->prices[in]);
     }
 }
 

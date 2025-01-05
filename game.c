@@ -5,20 +5,30 @@
 #include "shop.h"
 #include <stdio.h>
 
-void init_game(game *this, player* players, int playerCount, shop* shop) {
+void game_init(game *this, int playerCount) {
     int CAPACITY = 12;
     int probabilities_1[] = {6, 3, 1, 1, 0, 1, 0};
     int probabilities_2[] = {6, 2, 2, 0, 1, 0, 1};
-
-    // RABBITS | SHEEP | PIG | COW | HORSE | SMALLDOG | BIG DOG
     int prices[] = {6, 2, 3, 2, 1, 1};
-    
     int animalCounts[] = {10*playerCount, 5*playerCount, 4*playerCount, 2*playerCount, playerCount, playerCount - 1, playerCount/2};
-
+    this->playerCount = playerCount;
+    this->shop = malloc(sizeof(shop));
     dice_init(&this->dice_1, CAPACITY, probabilities_1);
     dice_init(&this->dice_2, CAPACITY, probabilities_2);
-    this->players = players;
+    this->players = malloc(sizeof(player) * playerCount);
+    for(int i = 0; i < this->playerCount; ++i) {
+        player_init(&this->players[i], i);
+    }
     shop_init(&this->shop, prices, animalCounts);
+}
+
+void game_destroy(game *this) {
+    for(int i = 0; i < this->playerCount; ++i) {
+        player_destroy(&this->players[i]);
+    }
+    shop_destroy(&this->shop);
+    dice_destroy(&this->dice_1);
+    dice_destroy(&this->dice_2);
 }
 
 void changeAnimalOwnership(game* this, player* currentPlayer, int type, int count) {
@@ -30,11 +40,11 @@ void changeAnimalOwnership(game* this, player* currentPlayer, int type, int coun
     }
 }
 
-void player_roll_dice(syn_game *this, player* currentPlayer) {
+void player_roll_dice(game *this, player* currentPlayer) {
     animalTypesDice dice_1;
     animalTypesDice dice_2;
-    roll_dice(&this->this->dice_1, &dice_1);
-    roll_dice(&this->this->dice_2, &dice_2);
+    roll_dice(&this->dice_1, &dice_1);
+    roll_dice(&this->dice_2, &dice_2);
 
     if ( dice_1 == dice_2) {
         changeAnimalOwnership(this->game, currentPlayer, dice_1, 1);
@@ -58,9 +68,9 @@ void player_roll_dice(syn_game *this, player* currentPlayer) {
     }
 }
 
-_Bool exchangeAnimal(syn_game *this, player* currentPlayer, animalTypesShop in, animalTypesShop out) {
-    if (currentPlayer->playerAnimals[in] >= this->game->shop.prices[0]) {
-        exchange_shop(&this->game->shop, currentPlayer, in, out);
+_Bool exchangeAnimal(game *this, player* currentPlayer, animalTypesShop in, animalTypesShop out) {
+    if (currentPlayer->playerAnimals[in] >= this->shop.prices[0]) {
+        exchange_shop(&this->shop, currentPlayer, in, out);
         return true;
     } else {
         return false;
@@ -96,4 +106,36 @@ void syn_game_destroy(syn_game* this) {
     }
     free(players_cond);
     free(players);
+}
+
+void syn_turn(syn_game* this, player* currentPlayer) {
+    pthread_mutex_lock(&this->mut);
+    while(currentPlayer->playerIndex != this->current_index) {
+        pthread_cond_wait(this->players_cond[currentPlayer->playerIndex], this->mut);
+    }
+    printf("Pick your action: \n1. Roll the dice \n2. Exchange animals in the shop\n");
+    int choice;
+    _Bool valid = false;
+    do {
+        printf("Enter your choice (1 or 2): ");
+        if (scanf("%d", &choice) == 1) {
+            if (choice == 1) {
+                printf("You chose to roll the dice.\n");
+                player_roll_dice(this->game, currentPlayer);
+                valid = true;
+            } else if (choice == 2) {
+                printf("You chose to exchange animals in the shop.\n");
+                //eto bleh
+                valid = true;
+            } else {
+                printf("Invalid choice. Please enter 1 or 2.\n");
+            }
+        } else {
+            printf("Invalid input. Please enter a number.\n");
+        }
+    } while(!valid);
+    
+
+    pthread_cond_signal(this->players_cond[((currentPlayer->playerIndex+1)%this->number_of_players)]);
+    pthread_mutex_unlock(&this->mut);
 }

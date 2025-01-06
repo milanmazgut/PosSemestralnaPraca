@@ -8,7 +8,7 @@
 
 typedef struct player{
     int playerIndex;
-    int playerAnimals[ANIMAL_COUNT_SHOP];
+    int* playerAnimals;
 } player;
 
 void player_init(player* playerPtr, int playerIndex);

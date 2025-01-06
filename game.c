@@ -98,7 +98,7 @@ void syn_game_init(syn_game* this, int number_of_players) {
 
 void syn_game_destroy(syn_game* this) {
     pthread_mutex_destroy(&this->mut);
-    for(int i 0; i < this->number_of_players; ++i) {
+    for(int i = 0; i < this->number_of_players; ++i) {
         pthread_cond_destroy(&this->players_cond[i]);
     }
     free(this->players_cond);
@@ -120,7 +120,7 @@ void syn_turn(syn_game* this, int playerIndex) {
         if (scanf("%d", &choice) == 1) {
             if (choice == 1) {
                 printf("You chose to roll the dice.\n");
-                player_roll_dice(this->game, this->game->players[playerIndex]);
+                player_roll_dice(this->game, &this->game->players[playerIndex]);
                 valid = true;
             } else if (choice == 2) {
                 printf("You chose to exchange animals in the shop.\n");
@@ -142,7 +142,7 @@ void syn_turn(syn_game* this, int playerIndex) {
 typedef struct data {
     syn_game* syn_game_;
     int index_;
-}
+} data;
 
 void* play(void* arg) {
     data* this = arg;
@@ -152,19 +152,19 @@ void* play(void* arg) {
 
 void start(int number_of_players) {
     int n = number_of_players;
-    syn_game* program;
-    syn_game_init(program, n);
-    pthread_t[n] players;
+    syn_game program;
+    syn_game_init(&program, n);
+    pthread_t players[n];
     for(int i = 0; i < n; ++i) {
         data data = {
-            .syn_buffer_ = program;
-            .index_ = i;
-        }
+            .syn_game_ = &program,
+            .index_ = i
+        };
         pthread_create(&players[i], NULL, play, &data);
     }
 
     for(int i = 0; i < n; ++i) {
-        pthread_join(&players[i], NULL);
+        pthread_join(players[i], NULL);
     }
-    syn_game_destroy(program);
+    syn_game_destroy(&program);
 }

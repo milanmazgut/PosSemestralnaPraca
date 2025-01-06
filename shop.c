@@ -1,7 +1,7 @@
 #include "shop.h"
 
 void shop_init(shop* this , int *prices, int *animalCounts) {
-    for (int i = 0; i < ANIMAL_COUNT_SHOP; i++) {
+    for (int i = 0; i < ANIMAL_COUNT; i++) {
         this->prices[i] = prices[i];
         this->allAnimals[i] = animalCounts[i];
     }
@@ -14,11 +14,11 @@ void change_animal_ownership(shop* this, player* currentPlayer, int type, int co
     } else {
         currentPlayer->playerAnimals[type] += this->allAnimals[type];
         printf("There aren't enough %s. Only %d were added.\n", animalNames[type], this->allAnimals[type]);
-        this->allAnimals[type] == 0;
+        this->allAnimals[type] = 0;
     }
 }
 
-void exchange_shop(shop *this, player* player, animalTypesShop in, animalTypesShop out) {
+void exchange_shop(shop *this, player* player, animalTypes in, animalTypes out) {
     if (in < out) {
         change_animal_ownership(this, player, in, -this->prices[in]);
         change_animal_ownership(this, player, out, 1);

@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 int get_animal_type(const char *animalName) {
-    for (int i = 0; i < ANIMAL_COUNT_SHOP; i++) {
+    for (int i = 0; i < ANIMAL_COUNT; i++) {
         if (strcmp(animalNames[i], animalName) == 0) {
             return i;
         }

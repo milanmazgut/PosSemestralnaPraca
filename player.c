@@ -1,6 +1,6 @@
 #include "player.h"
 void player_init(player* this) {
-    for(int i = 0; i < ANIMAL_COUNT_SHOP; i++) {
+    for(int i = 0; i < ANIMAL_COUNT; i++) {
         this->playerAnimals[i] = 0;
     }
 }

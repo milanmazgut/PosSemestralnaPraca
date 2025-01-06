@@ -15,7 +15,7 @@ typedef struct {
 
 
 void dice_init(dice* dicePtr, int capacity, int* probabilities); 
-void roll_dice(dice* dicePtr, animalTypesDice* type);
+void roll_dice(dice* dicePtr, animalTypes* type);
 void dice_destroy(dice* dicePtr);                 
 
 #endif

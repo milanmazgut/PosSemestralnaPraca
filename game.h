@@ -28,11 +28,13 @@ typedef struct syn_game {
     game* game;
 } syn_game;
 
-void game_init(game* gamePtr, player* players, int playerCount, shop* shop);
+void game_init(game* gamePtr, int playerCount);
 void player_roll_dice(game *gamePtr, player* currentPlayer);
 _Bool exchange_animal(syn_game *this, player* currentPlayer, animalTypesShop in, animalTypesShop out);
 void end_of_turn_animal_multiplication(game *this, player* currentPlayer);
-void syn_game_init(syn_game* syn_gamePtr, int number_of_players);
-void syn_game_destroy(syn_game* syn_gamePtr);
+void syn_game_init(syn_game* gamePtr, int number_of_players);
+void syn_game_destroy(syn_game* gamePtr);
+void syn_turn(syn_game* syn_gamePtr, int playerIndex);
+void start(int number_of_players);
 
 #endif

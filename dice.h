@@ -8,10 +8,10 @@
 
 
 
-typedef struct {
+typedef struct dice{
     int capacity;                  
-    int probabilities[ANIMAL_COUNT]; 
-} dice;
+    int* probabilities; 
+}dice; 
 
 
 void dice_init(dice* dicePtr, int capacity, int* probabilities); 

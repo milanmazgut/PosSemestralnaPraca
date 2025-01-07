@@ -8,11 +8,11 @@
 #include "player.h"
 
 typedef struct {
-    int prices[ANIMAL_COUNT_SHOP];
-    int allAnimals[ANIMAL_COUNT_SHOP];
+    int* prices;
+    int* allAnimals;
 } shop;
 
-void shop_init(shop* shopPtr, int* prices, int* animalCounts);
+void shop_init(shop* shopPtr, int* prices,const int* animalCounts);
 void exchange_shop(shop* shopPtr, player* player, animalTypesShop in, animalTypesShop out);
 void change_animal_ownership(shop* shopPtr, player* currentPlayer, int type, int count);
 void shop_destroy(shop* shopPtr);

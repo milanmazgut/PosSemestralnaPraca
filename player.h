@@ -7,10 +7,11 @@
 #include "enums.h"
 
 typedef struct player{
-    int playerAnimals[ANIMAL_COUNT_SHOP];
+    int playerIndex;
+    int* playerAnimals;
 } player;
 
-void player_init(player* playerPtr);
+void player_init(player* playerPtr, int playerIndex);
 void player_destroy(player* playerPtr);
 
 #endif

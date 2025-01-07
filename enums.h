@@ -9,8 +9,6 @@ typedef enum {
     HORSE,
     SMALL_DOG,
     BIG_DOG,
-    SMALL_DOG,
-    BIG_DOG,
     FOX,
     WOLF,
     ANIMAL_COUNT 

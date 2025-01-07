@@ -92,6 +92,11 @@ void syn_game_init(syn_game* this, int number_of_players) {
     for(int i = 0; i < this->number_of_players; ++i) {
         pthread_cond_init(&this->players_cond[i], NULL);
     }
+    this->game = malloc(sizeof(game));
+    if(this->game == NULL) {
+        perror("Failed to allocate memory for game");
+        exit(EXIT_FAILURE);
+    }
     game_init(this->game, this->number_of_players);
 
 }
@@ -103,7 +108,7 @@ void syn_game_destroy(syn_game* this) {
     }
     free(this->players_cond);
     game_destroy(this->game);
-    
+    free(this->game);
 }
 
 void syn_turn(syn_game* this, int playerIndex) {
@@ -134,8 +139,9 @@ void syn_turn(syn_game* this, int playerIndex) {
         }
     } while(!valid);
     
-
-    pthread_cond_signal(&this->players_cond[((playerIndex+1)%this->number_of_players)]);
+    this->current_index++;
+    this->current_index = this->current_index % this->number_of_players;
+    pthread_cond_signal(&this->players_cond[(this->current_index)]);
     pthread_mutex_unlock(&this->mut);
 }
 
@@ -147,6 +153,7 @@ typedef struct data {
 void* play(void* arg) {
     data* this = arg;
     syn_turn(this->syn_game_, this->index_);
+    free(this);
     return NULL;
 }
 
@@ -156,11 +163,14 @@ void start(int number_of_players) {
     syn_game_init(&program, n);
     pthread_t players[n];
     for(int i = 0; i < n; ++i) {
-        data data = {
-            .syn_game_ = &program,
-            .index_ = i
-        };
-        pthread_create(&players[i], NULL, play, &data);
+        data* thread_data = malloc(sizeof(data)); // Allocate memory for thread-specific data
+        if (!thread_data) {
+            perror("Failed to allocate memory for thread data");
+            exit(EXIT_FAILURE);
+        }
+        thread_data->syn_game_ = &program;
+        thread_data->index_ = i;
+        pthread_create(&players[i], NULL, play, thread_data);
     }
 
     for(int i = 0; i < n; ++i) {

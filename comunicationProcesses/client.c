@@ -26,7 +26,7 @@ static void* reader_thread(void* arg) {
     while (1) {
         char buf[BUFFER_SIZE];
         memset(buf, 0, sizeof(buf));
-        size_t n = read(cd->pipeFd, buf, sizeof(buf) - 1);
+        ssize_t n = read(cd->pipeFd, buf, sizeof(buf) - 1);
         if (n > 0) {
             buf[n] = '\0';
             printf("%s", buf);

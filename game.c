@@ -1,4 +1,5 @@
 #include "game.h"
+#include "comunicationProcesses/server.h"
 #include "dice.h"
 #include "enums.h"
 #include "player.h"
@@ -16,17 +17,12 @@ void game_init(game *this, int playerCount) {
     this->playerCount = playerCount;
     dice_init(&this->dice_1, CAPACITY, probabilities_1);
     dice_init(&this->dice_2, CAPACITY, probabilities_2);
-    this->players = malloc(sizeof(player) * playerCount);
-    for(int i = 0; i < this->playerCount; ++i) {
-        player_init(&this->players[i], i);
-    }
+    
     shop_init(&this->shop, prices, animalCounts);
 }
 
 void game_destroy(game *this) {
-    for(int i = 0; i < this->playerCount; ++i) {
-        player_destroy(&this->players[i]);
-    }
+    
     shop_destroy(&this->shop);
     dice_destroy(&this->dice_1);
     dice_destroy(&this->dice_2);
@@ -34,12 +30,11 @@ void game_destroy(game *this) {
 
 
 
-void player_roll_dice(game *this, player* currentPlayer) {
-    animalTypesDice dice_1;
-    animalTypesDice dice_2;
+void player_roll_dice(game *this, player* currentPlayer, const char* output) {
+    animalTypes dice_1;
+    animalTypes dice_2;
     roll_dice(&this->dice_1, &dice_1);
     roll_dice(&this->dice_2, &dice_2);
-
     if ( dice_1 == dice_2) {
         change_animal_ownership(&this->shop, currentPlayer, dice_1, 1);
     } else {
@@ -60,9 +55,10 @@ void player_roll_dice(game *this, player* currentPlayer) {
             }
         }
     }
+    snprintf(output, BUFFER_SIZE, "You dropped %s and %s", animalNames[dice_1], animalNames[dice_2]);  
 }
 
-_Bool exchange_animal(game *this, player* currentPlayer, animalTypesShop in, animalTypesShop out) {
+_Bool exchange_animal(game *this, player* currentPlayer, animalTypes in, animalTypes out) {
     if (currentPlayer->playerAnimals[in] >= this->shop.prices[out]) {
         exchange_shop(&this->shop, currentPlayer, in, out);
         return true;

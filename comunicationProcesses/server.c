@@ -88,7 +88,7 @@ void broadcast_msg(ServerData *sd, const char* msg) {
             i++;
             continue;
         }
-        size_t w = write(sd->clients[i].fd, msg, strlen(msg));
+        ssize_t w = write(sd->clients[i].fd, msg, strlen(msg));
         if (w < 0) {
             if (errno == EPIPE) {
                 printf("[SERVER] Detected client '%s' left (EPIPE on broadcast).\n", sd->clients[i].name);
@@ -112,7 +112,7 @@ void send_to_index(ServerData *sd, int idx, const char* msg) {
     if (idx < 0 || idx >= sd->clientCount) return;
     if (!sd->clients[idx].active) return;
 
-    size_t w = write(sd->clients[idx].fd, msg, strlen(msg));
+    ssize_t w = write(sd->clients[idx].fd, msg, strlen(msg));
     if (w < 0) {
         if (errno == EPIPE) {
             printf("[SERVER] Detected client '%s' left (EPIPE on send).\n", sd->clients[idx].name);
@@ -164,12 +164,15 @@ int server_main(void)
     fflush(stdout);
 
     bool running = true;
+    bool initialized = false;
+
+    game g;
 
     while (running) {
         char buffer[BUFFER_SIZE];
         memset(buffer, 0, sizeof(buffer));
 
-        size_t n = read(server_fd, buffer, sizeof(buffer) - 1);
+        ssize_t n = read(server_fd, buffer, sizeof(buffer) - 1);
         if (n > 0) {
             buffer[n] = '\0';
 
@@ -191,6 +194,13 @@ int server_main(void)
                 broadcast_msg(&sd, bc);
                 continue;
             }
+            
+            if (strcmp(cmd, "init") == 0) {
+                game_init(&g ,sd.clientCount);
+                initialized = true;
+                continue;
+            }
+            
 
             if (idx != sd.activeIndex) {
                 char waitMsg[BUFFER_SIZE];
@@ -198,31 +208,34 @@ int server_main(void)
                 send_to_index(&sd, idx, waitMsg);
                 continue;
             }
+            if (initialized) {
+                if (strcmp(cmd, "roll") == 0) {
+                    char bc[BUFFER_SIZE];
+                    snprintf(bc, sizeof(bc), "[BCAST] Player '%s' performed ROLL.\n", cname);
+                    broadcast_msg(&sd, bc);
+                    player_roll_dice(&g, &sd.clients[sd.activeIndex].player_, bc);
+                    broadcast_msg(&sd, bc);
 
-            if (strcmp(cmd, "roll") == 0) {
-                send_to_index(&sd, idx, "[SERVER] You rolled a 6!\n");
-                char bc[BUFFER_SIZE];
-                snprintf(bc, sizeof(bc), "[BCAST] Player '%s' performed ROLL.\n", cname);
-                broadcast_msg(&sd, bc);
-            }
-            else if (strcmp(cmd, "end") == 0) {
-                send_to_index(&sd, idx, "[SERVER] Your turn ended.\n");
-                char bc[BUFFER_SIZE];
-                snprintf(bc, sizeof(bc), "[BCAST] Player '%s' ended turn.\n", cname);
-                broadcast_msg(&sd, bc);
-                next_turn(&sd);
-                snprintf(bc, sizeof(bc), "[BCAST] Now it is '%s' turn.\n", get_active_name(&sd));
-                broadcast_msg(&sd, bc);
-            }
-            else if (strcmp(cmd, "shutdown") == 0) {
-                send_to_index(&sd, idx, "[SERVER] Shutting down...\n");
-                broadcast_msg(&sd, "[BCAST] *** SERVER shutting down ***\n");
-                running = false;
-            }
-            else {
-                char resp[BUFFER_SIZE];
-                snprintf(resp, sizeof(resp), "[SERVER] Unknown command: %s\n", cmd);
-                send_to_index(&sd, idx, resp);
+                }
+                else if (strcmp(cmd, "end") == 0) {
+                    send_to_index(&sd, idx, "[SERVER] Your turn ended.\n");
+                    char bc[BUFFER_SIZE];
+                    snprintf(bc, sizeof(bc), "[BCAST] Player '%s' ended turn.\n", cname);
+                    broadcast_msg(&sd, bc);
+                    next_turn(&sd);
+                    snprintf(bc, sizeof(bc), "[BCAST] Now it is '%s' turn.\n", get_active_name(&sd));
+                    broadcast_msg(&sd, bc);
+                }
+                else if (strcmp(cmd, "shutdown") == 0) {
+                    send_to_index(&sd, idx, "[SERVER] Shutting down...\n");
+                    broadcast_msg(&sd, "[BCAST] *** SERVER shutting down ***\n");
+                    running = false;
+                }
+                else {
+                    char resp[BUFFER_SIZE];
+                    snprintf(resp, sizeof(resp), "[SERVER] Unknown command: %s\n", cmd);
+                    send_to_index(&sd, idx, resp);
+                }
             }
         }
         else if (n == 0) {

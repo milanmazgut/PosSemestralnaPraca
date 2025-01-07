@@ -2,6 +2,7 @@
 #define SERVER_H
 
 #include <stdbool.h>
+#include "../game.h"
 
 #define SERVER_PIPE "server_pipe"
 #define BUFFER_SIZE 256
@@ -13,6 +14,7 @@ typedef struct {
     char name[BUFFER_SIZE];
     char pipe_path[BUFFER_SIZE];
     int  fd;
+    player player_;
 } Client;
 
 

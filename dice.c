@@ -9,7 +9,7 @@ void dice_init(dice* this, int capacity, int* probabilities) {
     }
 }
 
-void roll_dice(dice* this, animalTypesDice* type) {
+void roll_dice(dice* this, animalTypes* type) {
     int random = rand() % this->capacity; 
     int sum = 0;
 

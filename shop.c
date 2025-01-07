@@ -1,9 +1,9 @@
 #include "shop.h"
 
 void shop_init(shop* this , int *prices, const int *animalCounts) {
-    this->prices = malloc(ANIMAL_COUNT_SHOP * sizeof(int));
-    this->allAnimals = malloc(ANIMAL_COUNT_SHOP * sizeof(int));
-    for (int i = 0; i < ANIMAL_COUNT_SHOP; i++) {
+    this->prices = malloc(ANIMAL_COUNT * sizeof(int));
+    this->allAnimals = malloc(ANIMAL_COUNT * sizeof(int));
+    for (int i = 0; i < ANIMAL_COUNT; i++) {
         this->prices[i] = prices[i];
         this->allAnimals[i] = animalCounts[i];
     }
@@ -16,17 +16,19 @@ void change_animal_ownership(shop* this, player* currentPlayer, int type, int co
     } else {
         currentPlayer->playerAnimals[type] += this->allAnimals[type];
         printf("There aren't enough %s. Only %d were added.\n", animalNames[type], this->allAnimals[type]);
-        this->allAnimals[type] == 0;
+        this->allAnimals[type] = 0;
     }
 }
 
-void exchange_shop(shop *this, player* player, animalTypesShop in, animalTypesShop out) {
+void exchange_shop(shop *this, player* player, animalTypes in, animalTypes out) {
     if (in < out) {
         change_animal_ownership(this, player, in, -this->prices[in]);
         change_animal_ownership(this, player, out, 1);
+        printf("You have exchanged %s {%d} for %s {%d}.\n", animalNames[in], this->prices[in], animalNames[out], 1);
     } else {
         change_animal_ownership(this, player, in, -1);
-        change_animal_ownership(this, player, out, +this->prices[out]);
+        change_animal_ownership(this, player, out, +this->prices[out]); 
+        printf("You have exchanged %s {%d} for %s {%d}.\n", animalNames[in], 1, animalNames[out], this->prices[in]);
     }
 }
 

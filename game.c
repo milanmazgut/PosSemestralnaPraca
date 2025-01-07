@@ -7,8 +7,10 @@
 
 void game_init(game *this, int playerCount) {
     int CAPACITY = 12;
-    int probabilities_1[] = {6, 3, 1, 1, 0, 1, 0};
-    int probabilities_2[] = {6, 2, 2, 0, 1, 0, 1};
+    int probabilities_1[] = {6, 3, 1, 1, 0, 0, 0, 1, 0};
+    int probabilities_2[] = {6, 2, 2, 0, 1, 0, 0, 0, 1};
+
+    // RABBITS | SHEEP | PIG | COW | HORSE | SMALLDOG | BIG DOG
     int prices[] = {6, 2, 3, 2, 1, 1};
     int animalCounts[] = {10*playerCount, 5*playerCount, 4*playerCount, 2*playerCount, playerCount, playerCount - 1, playerCount/2};
     this->playerCount = playerCount;
@@ -70,8 +72,8 @@ _Bool exchange_animal(game *this, player* currentPlayer, animalTypesShop in, ani
 }
 
 void end_of_turn_animal_multiplication(game *this, player* currentPlayer) {
-    for (int i = 0; i < ANIMAL_COUNT_SHOP; i++) {
-        change_animal_ownership(&this->game.shop, currentPlayer, i, currentPlayer->playerAnimals[i]/2);
+    for (int i = 0; i < ANIMAL_COUNT; i++) {
+        change_animal_ownership(&this->shop, currentPlayer, i, currentPlayer->playerAnimals[i]/2);
     }
 }
 

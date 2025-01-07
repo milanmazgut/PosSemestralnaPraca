@@ -166,8 +166,8 @@ int server_main(void)
     bool running = true;
     bool initialized = false;
 
-    game g;
-
+    game* g;
+    g = malloc(sizeof(game));
     while (running) {
         char buffer[BUFFER_SIZE];
         memset(buffer, 0, sizeof(buffer));
@@ -196,7 +196,10 @@ int server_main(void)
             }
             
             if (strcmp(cmd, "init") == 0) {
-                game_init(&g ,sd.clientCount);
+                game_init(g ,sd.clientCount);
+                printf("INIT BRUV\n %d", sd.clientCount);
+
+                fflush(stdout);
                 initialized = true;
                 continue;
             }
@@ -210,12 +213,12 @@ int server_main(void)
             }
             if (initialized) {
                 if (strcmp(cmd, "roll") == 0) {
-                    char bc[BUFFER_SIZE];
-                    snprintf(bc, sizeof(bc), "[BCAST] Player '%s' performed ROLL.\n", cname);
+                    char* bc = malloc(BUFFER_SIZE * sizeof(char));
+                    //snprintf(bc, sizeof(bc), "[BCAST] Player '%s' performed ROLL.\n", cname);
+                    //broadcast_msg(&sd, bc);
+                    player_roll_dice(g, &sd.clients[sd.activeIndex].player_, bc);
                     broadcast_msg(&sd, bc);
-                    player_roll_dice(&g, &sd.clients[sd.activeIndex].player_, bc);
-                    broadcast_msg(&sd, bc);
-
+                    free(bc);
                 }
                 else if (strcmp(cmd, "end") == 0) {
                     send_to_index(&sd, idx, "[SERVER] Your turn ended.\n");

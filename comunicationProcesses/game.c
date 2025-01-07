@@ -1,5 +1,5 @@
 #include "game.h"
-#include "comunicationProcesses/server.h"
+#include "server.h"
 #include "dice.h"
 #include "enums.h"
 #include "player.h"
@@ -30,13 +30,16 @@ void game_destroy(game *this) {
 
 
 
-void player_roll_dice(game *this, player* currentPlayer, const char* output) {
+void player_roll_dice(game *this, player* currentPlayer, char* output) {
     animalTypes dice_1;
     animalTypes dice_2;
     roll_dice(&this->dice_1, &dice_1);
     roll_dice(&this->dice_2, &dice_2);
+    snprintf(output, BUFFER_SIZE, "You dropped %s and %s", animalNames[dice_1], animalNames[dice_2]); 
     if ( dice_1 == dice_2) {
         change_animal_ownership(&this->shop, currentPlayer, dice_1, 1);
+        printf("success");
+        fflush(stdout);
     } else {
         if(dice_1 == FOX || dice_2 == FOX) {
             if (currentPlayer->playerAnimals[SMALL_DOG] == 1) {
@@ -55,7 +58,7 @@ void player_roll_dice(game *this, player* currentPlayer, const char* output) {
             }
         }
     }
-    snprintf(output, BUFFER_SIZE, "You dropped %s and %s", animalNames[dice_1], animalNames[dice_2]);  
+     
 }
 
 _Bool exchange_animal(game *this, player* currentPlayer, animalTypes in, animalTypes out) {
@@ -102,39 +105,39 @@ void syn_game_destroy(syn_game* this) {
     free(this->game);
 }
 
-void syn_turn(syn_game* this, int playerIndex) {
-    pthread_mutex_lock(&this->mut);
-    while(playerIndex != this->current_index) {
-        pthread_cond_wait(&this->players_cond[playerIndex], &this->mut);
-    }
-    printf("PLAYER%d\n", playerIndex);
-    printf("Pick your action: \n1. Roll the dice \n2. Exchange animals in the shop\n");
-    int choice;
-    _Bool valid = false;
-    do {
-        printf("Enter your choice (1 or 2): ");
-        if (scanf("%d", &choice) == 1) {
-            if (choice == 1) {
-                printf("You chose to roll the dice.\n");
-                player_roll_dice(this->game, &this->game->players[playerIndex]);
-                valid = true;
-            } else if (choice == 2) {
-                printf("You chose to exchange animals in the shop.\n");
-                //eto bleh
-                valid = true;
-            } else {
-                printf("Invalid choice. Please enter 1 or 2.\n");
-            }
-        } else {
-            printf("Invalid input. Please enter a number.\n");
-        }
-    } while(!valid);
+// void syn_turn(syn_game* this, int playerIndex) {
+//     pthread_mutex_lock(&this->mut);
+//     while(playerIndex != this->current_index) {
+//         pthread_cond_wait(&this->players_cond[playerIndex], &this->mut);
+//     }
+//     printf("PLAYER%d\n", playerIndex);
+//     printf("Pick your action: \n1. Roll the dice \n2. Exchange animals in the shop\n");
+//     int choice;
+//     _Bool valid = false;
+//     do {
+//         printf("Enter your choice (1 or 2): ");
+//         if (scanf("%d", &choice) == 1) {
+//             if (choice == 1) {
+//                 printf("You chose to roll the dice.\n");
+//                 player_roll_dice(this->game, &this->game->players[playerIndex]);
+//                 valid = true;
+//             } else if (choice == 2) {
+//                 printf("You chose to exchange animals in the shop.\n");
+//                 //eto bleh
+//                 valid = true;
+//             } else {
+//                 printf("Invalid choice. Please enter 1 or 2.\n");
+//             }
+//         } else {
+//             printf("Invalid input. Please enter a number.\n");
+//         }
+//     } while(!valid);
     
-    this->current_index++;
-    this->current_index = this->current_index % this->number_of_players;
-    pthread_cond_signal(&this->players_cond[(this->current_index)]);
-    pthread_mutex_unlock(&this->mut);
-}
+//     this->current_index++;
+//     this->current_index = this->current_index % this->number_of_players;
+//     pthread_cond_signal(&this->players_cond[(this->current_index)]);
+//     pthread_mutex_unlock(&this->mut);
+// }
 
 typedef struct data {
     syn_game* syn_game_;
@@ -143,7 +146,7 @@ typedef struct data {
 
 void* play(void* arg) {
     data* this = arg;
-    syn_turn(this->syn_game_, this->index_);
+    //syn_turn(this->syn_game_, this->index_);
     free(this);
     return NULL;
 }

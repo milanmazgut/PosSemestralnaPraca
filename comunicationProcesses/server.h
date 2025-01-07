@@ -2,7 +2,7 @@
 #define SERVER_H
 
 #include <stdbool.h>
-#include "../game.h"
+#include "game.h"
 
 #define SERVER_PIPE "server_pipe"
 #define BUFFER_SIZE 256

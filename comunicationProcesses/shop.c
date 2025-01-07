@@ -1,6 +1,6 @@
 #include "shop.h"
 
-void shop_init(shop* this , int *prices, const int *animalCounts) {
+void shop_init(shop* this , int *prices, int *animalCounts) {
     this->prices = malloc(ANIMAL_COUNT * sizeof(int));
     this->allAnimals = malloc(ANIMAL_COUNT * sizeof(int));
     for (int i = 0; i < ANIMAL_COUNT; i++) {

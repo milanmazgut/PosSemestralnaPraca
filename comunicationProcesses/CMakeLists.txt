@@ -10,6 +10,11 @@ add_executable(program
     server.c
     client.c
     pipe.c
+    game.c
+    player.c
+    dice.c
+    shop.c
+    enums.c
 )
 
 target_link_libraries(program pthread)

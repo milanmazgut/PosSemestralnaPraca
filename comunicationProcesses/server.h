@@ -5,7 +5,7 @@
 #include "game.h"
 
 #define SERVER_PIPE "server_pipe"
-#define BUFFER_SIZE 256
+#define BUFFER_SIZE 1024
 #define MAX_CLIENTS 10
 
 

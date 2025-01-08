@@ -31,6 +31,8 @@ int add_client(ServerData *sd, const char* name) {
     strncpy(client->name, name, BUFFER_SIZE - 1);
     client->name[BUFFER_SIZE - 1] = '\0';
 
+    player_init(&client->player_, sd->clientCount);
+
     snprintf(client->pipe_path, sizeof(client->pipe_path), "client_%s", name);
 
     

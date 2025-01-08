@@ -3,7 +3,7 @@
 void shop_init(shop* this , int *prices, int *animalCounts) {
     this->prices = malloc(ANIMAL_COUNT * sizeof(int));
     this->allAnimals = malloc(ANIMAL_COUNT * sizeof(int));
-    for (int i = 0; i < ANIMAL_COUNT; i++) {
+    for (int i = 0; i < FOX; i++) {
         this->prices[i] = prices[i];
         this->allAnimals[i] = animalCounts[i];
     }
@@ -11,7 +11,11 @@ void shop_init(shop* this , int *prices, int *animalCounts) {
 // -count for selling to shop, +count for buying from shop
 void change_animal_ownership(shop* this, player* currentPlayer, int type, int count) {
     if (this->allAnimals[type] > 0) {
+        printf("Animal type: %s amount %d\n", animalNames[type], this->allAnimals[type]);
+        fflush(stdout);
         this->allAnimals[type] -= count;
+        printf("Animal type: %s amount %d\n", animalNames[type], currentPlayer->playerAnimals[0]);
+        fflush(stdout);
         currentPlayer->playerAnimals[type] += count;
     } else {
         currentPlayer->playerAnimals[type] += this->allAnimals[type];

@@ -31,8 +31,8 @@ void game_destroy(game *this) {
 
 
 void player_roll_dice(game *this, player* currentPlayer, char* output) {
-    animalTypes dice_1;
-    animalTypes dice_2;
+    int dice_1;
+    int dice_2;
     roll_dice(&this->dice_1, &dice_1);
     roll_dice(&this->dice_2, &dice_2);
     snprintf(output, BUFFER_SIZE, "You dropped %s and %s", animalNames[dice_1], animalNames[dice_2]); 
@@ -52,9 +52,9 @@ void player_roll_dice(game *this, player* currentPlayer, char* output) {
             if (currentPlayer->playerAnimals[BIG_DOG] == 1) {
                 change_animal_ownership(&this->shop, currentPlayer, BIG_DOG, -1);
             } else {
-                change_animal_ownership(&this->shop, currentPlayer, SHEEP,currentPlayer->playerAnimals[SHEEP]);
-                change_animal_ownership(&this->shop, currentPlayer, PIG,currentPlayer->playerAnimals[PIG]);
-                change_animal_ownership(&this->shop, currentPlayer, COW,currentPlayer->playerAnimals[COW]);
+                change_animal_ownership(&this->shop, currentPlayer, SHEEP, -currentPlayer->playerAnimals[SHEEP]);
+                change_animal_ownership(&this->shop, currentPlayer, PIG, -currentPlayer->playerAnimals[PIG]);
+                change_animal_ownership(&this->shop, currentPlayer, COW, -currentPlayer->playerAnimals[COW]);
             }
         }
     }

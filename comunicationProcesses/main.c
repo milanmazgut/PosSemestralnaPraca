@@ -16,7 +16,11 @@ int main(int argc, char *argv[])
     }
 
     if (strcmp(argv[1], "server") == 0) {
-        return server_main();
+        if (argc < 3) {
+            fprintf(stderr, "Missing number of required clients.\n");
+            return 1;
+        }
+        return server_main(atoi(argv[2]));
     }
     else if (strcmp(argv[1], "client") == 0) {
         if (argc < 3) {

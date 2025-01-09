@@ -22,13 +22,11 @@ void game_init(game *this, int playerCount) {
 }
 
 void game_destroy(game *this) {
-    
+  
     shop_destroy(&this->shop);
     dice_destroy(&this->dice_1);
     dice_destroy(&this->dice_2);
 }
-
-
 
 void player_roll_dice(game *this, player* currentPlayer, char* output) {
     int dice_1;
@@ -62,13 +60,15 @@ void player_roll_dice(game *this, player* currentPlayer, char* output) {
 }
 
 _Bool exchange_animal(game *this, player* currentPlayer, animalTypes in, animalTypes out) {
-    if (currentPlayer->playerAnimals[in] >= this->shop.prices[out]) {
+    if (currentPlayer->playerAnimals[in] >= this->shop.prices[out] && this->shop.allAnimals[out] > 0) {
         exchange_shop(&this->shop, currentPlayer, in, out);
         return true;
     } else {
         return false;
     }
 }
+
+
 
 void end_of_turn_animal_multiplication(game *this, player* currentPlayer) {
     for (int i = 0; i < ANIMAL_COUNT; i++) {

@@ -29,6 +29,7 @@ typedef struct syn_game {
 } syn_game;
 
 void game_init(game* gamePtr, int playerCount);
+void game_destroy(game *this);
 void player_roll_dice(game *gamePtr, player* currentPlayer, char* output);
 _Bool exchange_animal(game *this, player* currentPlayer, animalTypes in, animalTypes out);
 void end_of_turn_animal_multiplication(game *this, player* currentPlayer);

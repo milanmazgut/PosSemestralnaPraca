@@ -1,4 +1,5 @@
 #include "server.h"
+#include "game.h"
 #include "pipe.h"
 
 #include <stdio.h>
@@ -45,7 +46,7 @@ int add_client(ServerData *sd, const char* name) {
     if (sd->activeIndex < 0) {
         sd->activeIndex = newIndex;
     }
-
+    sd->clients[sd->activeIndex].performedAction = 0;
     printf("[SERVER] New client '%s' (index=%d) joined.\n", name, newIndex);
     fflush(stdout);
 
@@ -58,7 +59,7 @@ void remove_client(ServerData *sd, int idx) {
         return;
     }
     pipe_close(sd->clients[idx].fd);
-    pipe_destroy(sd->clients[idx].pipe_path);
+    //pipe_destroy(sd->clients[idx].pipe_path);
 
     sd->clients[idx].active = false;
     
@@ -96,7 +97,7 @@ void broadcast_msg(ServerData *sd, const char* msg) {
                 printf("[SERVER] Detected client '%s' left (EPIPE on broadcast).\n", sd->clients[i].name);
                 fflush(stdout);
 
-                char bc[BUFFER_SIZE];
+                char bc[BUFFER_SIZE*2];
                 snprintf(bc, sizeof(bc), "[BCAST] Player '%s' disconnected.\n", sd->clients[i].name);
                 remove_client(sd, i);
                 broadcast_msg(sd, bc);
@@ -110,6 +111,7 @@ void broadcast_msg(ServerData *sd, const char* msg) {
     }
 }
 
+
 void send_to_index(ServerData *sd, int idx, const char* msg) {
     if (idx < 0 || idx >= sd->clientCount) return;
     if (!sd->clients[idx].active) return;
@@ -120,7 +122,7 @@ void send_to_index(ServerData *sd, int idx, const char* msg) {
             printf("[SERVER] Detected client '%s' left (EPIPE on send).\n", sd->clients[idx].name);
             fflush(stdout);
 
-            char bc[BUFFER_SIZE];
+            char bc[BUFFER_SIZE*2];
             snprintf(bc, sizeof(bc), "[BCAST] Player '%s' disconnected.\n", sd->clients[idx].name);
 
             remove_client(sd, idx);
@@ -146,9 +148,55 @@ const char* get_active_name(ServerData *sd) {
     return sd->clients[sd->activeIndex].name;
 }
 
+int get_animal_type(const char *animalName) {
+    for (int i = 0; i < ANIMAL_COUNT; i++) {
+        if (strcmp(animalNames[i], animalName) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
 
-int server_main(void) 
+void perform_exchange(game *game, ServerData *sd, const char *animalIn, const char *animalOut, int count) {
+    int inType = get_animal_type(animalIn);
+    int outType = get_animal_type(animalOut);
+
+    if (inType == -1 || outType == -1) {
+        printf("Invalid animal name provided.\n");
+        fflush(stdout);
+        return;
+    }
+    
+    if (inType - outType == 1 || inType - outType == -1) {
+            for (int i = 0; i < count; i++) {
+        exchange_animal(game, get_active_player(sd), inType, outType) ? printf("success") : printf("fail");
+        fflush(stdout);
+    }
+    } else {
+        printf("Invalid exchange.\n");
+        fflush(stdout);
+    
+    }
+}
+
+int check_action_count(ServerData *sd, int index) { //returns 1 if player can use roll command
+    if(sd->clients[sd->activeIndex].performedAction == 1) {
+        char noActionMsg[BUFFER_SIZE*2];
+        snprintf(noActionMsg, sizeof(noActionMsg), "[SERVER] You already used roll this turn.");
+        send_to_index(sd, index, noActionMsg);
+        return 0;
+        }
+    sd->clients[sd->activeIndex].performedAction = 1;
+    return 1;
+}
+
+player* get_active_player(ServerData *sd) {
+    return &sd->clients[sd->activeIndex].player_;
+}
+
+int server_main(int requiredNumberOfPlayers) 
 {
+    int requiredCount = requiredNumberOfPlayers; 
     ServerData sd;
     sd.clientCount = 0;
     sd.activeIndex = -1;
@@ -162,7 +210,7 @@ int server_main(void)
     printf("[SERVER] Opening '%s' for reading...\n", SERVER_PIPE);
     int server_fd = pipe_open_read(SERVER_PIPE);
 
-    printf("[SERVER] Running. Commands: roll, trade, end, shutdown, quit.\n");
+    printf("[SERVER] Running. Commands: roll, exchange <animal1> <animal2>, end, shutdown, quit.\n");
     fflush(stdout);
 
     bool running = true;
@@ -170,6 +218,7 @@ int server_main(void)
 
     game* g;
     g = malloc(sizeof(game));
+
     while (running) {
         char buffer[BUFFER_SIZE];
         memset(buffer, 0, sizeof(buffer));
@@ -180,66 +229,98 @@ int server_main(void)
 
             char cname[BUFFER_SIZE] = {0};
             char cmd[BUFFER_SIZE]   = {0};
-            sscanf(buffer, "%s %s", cname, cmd);
+            char parama[BUFFER_SIZE]   = {0};
+            char paramb[BUFFER_SIZE]   = {0};
 
-            int idx = add_client(&sd, cname);
+            int count = sscanf(buffer, "%s %s", cname, cmd);
+
+            if (count < 2) {
+                printf("[SERVER] Error with command parse.\n");
+                fflush(stdout);
+                continue;
+            }
+        
+            int idx = add_client(&sd, cname); //if cleint already exists returns his index
             if (idx < 0) {
                 printf("[SERVER] Could not add client '%s'.\n", cname);
                 fflush(stdout);
                 continue;
             }
+        
 
             if (strcmp(cmd, "quit") == 0) {
-                char bc[BUFFER_SIZE];
-                snprintf(bc, sizeof(bc), "[BCAST] Player '%s' left the game.\n", cname);
+                send_to_index(&sd, idx, "shutdown");
+
                 remove_client(&sd, idx);
+                
+                char bc[BUFFER_SIZE*2];
+                snprintf(bc, sizeof(bc), "[BCAST] Player '%s' left the game.\n", cname);
                 broadcast_msg(&sd, bc);
                 continue;
             }
             
-            if (strcmp(cmd, "init") == 0) {
-                game_init(g ,sd.clientCount);
-                printf("INIT BRUV\n %d", sd.clientCount);
-
-                fflush(stdout);
-                initialized = true;
+            if (strcmp(cmd, "init") == 0 && !initialized) {
+                if (sd.clientCount == requiredCount) {
+                    game_init(g ,sd.clientCount);
+                    char bc[BUFFER_SIZE*2];
+                    snprintf(bc, sizeof(bc), "[BCAST] Game was successfuly initialzied for players %d\n", sd.clientCount);
+                    broadcast_msg(&sd, bc);
+                    initialized = true;
+                } else {
+                    char bc[BUFFER_SIZE*2];
+                    snprintf(bc, sizeof(bc), "You have successfully joined the game. Waiting for all players %d/%d", sd.clientCount, requiredCount);
+                    send_to_index(&sd,idx,bc);
+                }
                 continue;
             }
             
-
             if (idx != sd.activeIndex) {
-                char waitMsg[BUFFER_SIZE];
-                snprintf(waitMsg, sizeof(waitMsg), "[SERVER] Wait your turn. Current: %s\n", get_active_name(&sd));
+                char waitMsg[BUFFER_SIZE*2];
+                snprintf(waitMsg, sizeof(waitMsg), "[SERVER] Wait your turn. Current player: %s\n", get_active_name(&sd));
                 send_to_index(&sd, idx, waitMsg);
                 continue;
             }
+            
             if (initialized) {
-                if (strcmp(cmd, "roll") == 0) {
-                    char* bc = malloc(BUFFER_SIZE * sizeof(char));
-                    //snprintf(bc, sizeof(bc), "[BCAST] Player '%s' performed ROLL.\n", cname);
-                    //broadcast_msg(&sd, bc);
-                    player_roll_dice(g, &sd.clients[sd.activeIndex].player_, bc);
+                if (strcmp(cmd, "roll") == 0 && check_action_count(&sd, idx)) {
+                    char bc[BUFFER_SIZE*2];
+                    player_roll_dice(g, get_active_player(&sd), bc); //TODO fix logs from inner functions
                     broadcast_msg(&sd, bc);
-                    free(bc);
+                    continue;
                 }
+
+                else if (strcmp(cmd, "exchange") == 0) {
+                    sscanf(buffer, "%*s %*s %s %s", parama, paramb);
+                    perform_exchange(g, &sd,parama,paramb,1); //TODO remove the fprint and send msgs
+                    char bc[BUFFER_SIZE*2];
+                    broadcast_msg(&sd, bc);
+                    continue;
+                
+                }
+
+                //TODO Continue here
                 else if (strcmp(cmd, "end") == 0) {
                     send_to_index(&sd, idx, "[SERVER] Your turn ended.\n");
-                    char bc[BUFFER_SIZE];
+                    char bc[BUFFER_SIZE*2];
                     snprintf(bc, sizeof(bc), "[BCAST] Player '%s' ended turn.\n", cname);
                     broadcast_msg(&sd, bc);
                     next_turn(&sd);
                     snprintf(bc, sizeof(bc), "[BCAST] Now it is '%s' turn.\n", get_active_name(&sd));
                     broadcast_msg(&sd, bc);
+                    sd.clients[sd.activeIndex].performedAction = 0;
+                    continue;
                 }
                 else if (strcmp(cmd, "shutdown") == 0) {
                     send_to_index(&sd, idx, "[SERVER] Shutting down...\n");
                     broadcast_msg(&sd, "[BCAST] *** SERVER shutting down ***\n");
+                    broadcast_msg(&sd, "shutdown");
                     running = false;
                 }
                 else {
-                    char resp[BUFFER_SIZE];
+                    char resp[BUFFER_SIZE*2];
                     snprintf(resp, sizeof(resp), "[SERVER] Unknown command: %s\n", cmd);
                     send_to_index(&sd, idx, resp);
+                    continue;
                 }
             }
         }
@@ -253,15 +334,20 @@ int server_main(void)
         }
     }
 
-    for (int i = 0; i < sd.clientCount; i++) {
-        if (sd.clients[i].active) {
-            pipe_close(sd.clients[i].fd);
-            pipe_destroy(sd.clients[i].pipe_path);
-        }
-    }
+
+    // for (int i = 0; i < sd.clientCount; i++) {
+    //     if (sd.clients[i].active) {
+    //         pipe_close(sd.clients[i].fd);
+    //         pipe_destroy(sd.clients[i].pipe_path);
+    //     }
+    // }
+
     pipe_close(server_fd);
     pipe_destroy(SERVER_PIPE);
 
+    game_destroy(g);
+    free(g);
+    
     printf("[SERVER] Shutdown.\n");
     fflush(stdout);
     return 0;

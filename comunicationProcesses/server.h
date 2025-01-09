@@ -33,7 +33,7 @@ void send_to_index(ServerData *sd, int idx, const char* msg);
 void next_turn(ServerData *sd);
 const char* get_active_name(ServerData *sd);
 int get_animal_type(const char *animalName);
-void perform_exchange(game *g, ServerData *sd, const char *animalIn, const char *animalOut, int count);
+void perform_exchange(game *g, ServerData *sd, const char *animalIn, const char *animalOut, int count, char * output);
 int check_action_count(ServerData *sd, int index);
 player* get_active_player(ServerData *sd);
 

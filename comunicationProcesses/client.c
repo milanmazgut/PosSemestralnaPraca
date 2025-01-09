@@ -7,7 +7,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <errno.h>
 
 #define BUFFER_SIZE 256
 #define SERVER_PIPE "server_pipe"

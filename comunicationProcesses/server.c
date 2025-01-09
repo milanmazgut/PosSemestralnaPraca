@@ -157,25 +157,27 @@ int get_animal_type(const char *animalName) {
     return -1;
 }
 
-void perform_exchange(game *game, ServerData *sd, const char *animalIn, const char *animalOut, int count) {
+void perform_exchange(game *game, ServerData *sd, const char *animalIn, const char *animalOut, int count, char * output) {
     int inType = get_animal_type(animalIn);
     int outType = get_animal_type(animalOut);
 
     if (inType == -1 || outType == -1) {
-        printf("Invalid animal name provided.\n");
-        fflush(stdout);
+        snprintf(output, BUFFER_SIZE, "Invalid animal names provided.\n");
         return;
     }
     
     if (inType - outType == 1 || inType - outType == -1) {
             for (int i = 0; i < count; i++) {
-        exchange_animal(game, get_active_player(sd), inType, outType) ? printf("success") : printf("fail");
-        fflush(stdout);
-    }
+        _Bool success = exchange_animal(game, get_active_player(sd), inType, outType);
+        if (success) {
+            snprintf(output, BUFFER_SIZE, "Animals have been succesfuly changed\n");
+        }
+        else {
+            snprintf(output, BUFFER_SIZE, "There was an error while exchanging animals.\n");
+        }
+   }
     } else {
-        printf("Invalid exchange.\n");
-        fflush(stdout);
-    
+        snprintf(output, BUFFER_SIZE, "Invalid exchange.\n");
     }
 }
 
@@ -284,23 +286,23 @@ int server_main(int requiredNumberOfPlayers)
             if (initialized) {
                 if (strcmp(cmd, "roll") == 0 && check_action_count(&sd, idx)) {
                     char bc[BUFFER_SIZE*2];
-                    player_roll_dice(g, get_active_player(&sd), bc); //TODO fix logs from inner functions
+                    player_roll_dice(g, get_active_player(&sd), bc);
                     broadcast_msg(&sd, bc);
                     continue;
                 }
 
                 else if (strcmp(cmd, "exchange") == 0) {
                     sscanf(buffer, "%*s %*s %s %s", parama, paramb);
-                    perform_exchange(g, &sd,parama,paramb,1); //TODO remove the fprint and send msgs
+                    char msg[BUFFER_SIZE];
+                    perform_exchange(g, &sd, parama, paramb, 1, msg);
+                    send_to_index(&sd, idx, msg);
                     char bc[BUFFER_SIZE*2];
                     broadcast_msg(&sd, bc);
                     continue;
                 
                 }
 
-                //TODO Continue here
                 else if (strcmp(cmd, "end") == 0) {
-                    send_to_index(&sd, idx, "[SERVER] Your turn ended.\n");
                     char bc[BUFFER_SIZE*2];
                     snprintf(bc, sizeof(bc), "[BCAST] Player '%s' ended turn.\n", cname);
                     broadcast_msg(&sd, bc);
@@ -315,6 +317,10 @@ int server_main(int requiredNumberOfPlayers)
                     broadcast_msg(&sd, "[BCAST] *** SERVER shutting down ***\n");
                     broadcast_msg(&sd, "shutdown");
                     running = false;
+                }
+                else if (strcmp(cmd, "inventory") == 0) {
+                    //TODO show player inventory functionality
+                    continue;
                 }
                 else {
                     char resp[BUFFER_SIZE*2];
@@ -333,14 +339,6 @@ int server_main(int requiredNumberOfPlayers)
             break;
         }
     }
-
-
-    // for (int i = 0; i < sd.clientCount; i++) {
-    //     if (sd.clients[i].active) {
-    //         pipe_close(sd.clients[i].fd);
-    //         pipe_destroy(sd.clients[i].pipe_path);
-    //     }
-    // }
 
     pipe_close(server_fd);
     pipe_destroy(SERVER_PIPE);

@@ -19,8 +19,6 @@ void roll_dice(dice* this, int* type) {
         sum += this->probabilities[i];
         if (random < sum) {
             *type = i;
-            printf("Rolled: %s\n", animalNames[i]);
-            fflush(stdout);
             return;
         }
     }

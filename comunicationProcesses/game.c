@@ -33,7 +33,7 @@ void player_roll_dice(game *this, player* currentPlayer, char* output) {
     int dice_2;
     roll_dice(&this->dice_1, &dice_1);
     roll_dice(&this->dice_2, &dice_2);
-
+    snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n Nothing happens, continue playing or end your turn", animalNames[dice_1], animalNames[dice_2]);
 
     if ( dice_1 == dice_2) {
         change_animal_ownership(&this->shop, currentPlayer, dice_1, 1);
@@ -62,9 +62,6 @@ void player_roll_dice(game *this, player* currentPlayer, char* output) {
             }
         }
     }
-    snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n Nothing happens, continue playing or end your turn", animalNames[dice_1], animalNames[dice_2]);
-
-     
 }
 
 _Bool exchange_animal(game *this, player* currentPlayer, animalTypes in, animalTypes out) {

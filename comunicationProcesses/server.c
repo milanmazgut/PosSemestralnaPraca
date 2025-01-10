@@ -1,4 +1,5 @@
 #include "server.h"
+#include "enums.h"
 #include "game.h"
 #include "pipe.h"
 
@@ -157,7 +158,7 @@ int get_animal_type(const char *animalName) {
     return -1;
 }
 
-void perform_exchange(game *game, ServerData *sd, const char *animalIn, const char *animalOut, int count, char * output) {
+void perform_exchange(game *game, ServerData *sd, const char *animalIn, const char *animalOut, char * output) {
     int inType = get_animal_type(animalIn);
     int outType = get_animal_type(animalOut);
 
@@ -165,9 +166,16 @@ void perform_exchange(game *game, ServerData *sd, const char *animalIn, const ch
         snprintf(output, BUFFER_SIZE, "Invalid animal names provided.\n");
         return;
     }
-    
-    if (inType - outType == 1 || inType - outType == -1) {
-            for (int i = 0; i < count; i++) {
+    if ((inType - outType == 1 || inType - outType == -1) || (inType == 1 && outType == 5 || inType == 3 && outType == 6)) {
+
+        if (inType == 1 && outType == 5 && get_active_player(sd)->playerAnimals[SMALL_DOG] != 0) {
+            snprintf(output, BUFFER_SIZE, "Cannot have more than one small dog.\n");
+            return;
+        } else if (inType == 3 && outType == 6 && get_active_player(sd)->playerAnimals[BIG_DOG] != 0) {
+            snprintf(output, BUFFER_SIZE, "Cannot have more than one big dog.\n");
+            return;
+        }
+
         _Bool success = exchange_animal(game, get_active_player(sd), inType, outType);
         if (success) {
             snprintf(output, BUFFER_SIZE, "Animals have been succesfuly changed\n");
@@ -175,7 +183,6 @@ void perform_exchange(game *game, ServerData *sd, const char *animalIn, const ch
         else {
             snprintf(output, BUFFER_SIZE, "There was an error while exchanging animals.\n");
         }
-   }
     } else {
         snprintf(output, BUFFER_SIZE, "Invalid exchange.\n");
     }
@@ -190,6 +197,15 @@ int check_action_count(ServerData *sd, int index) { //returns 1 if player can us
         }
     sd->clients[sd->activeIndex].performedAction = 1;
     return 1;
+}
+
+bool check_victory(ServerData *sd) {
+    for (int i = 0; i < SMALL_DOG; i++) {
+        if (get_active_player(sd)->playerAnimals[i] == 0) {
+            return false;
+        }
+    }
+    return true;
 }
 
 player* get_active_player(ServerData *sd) {
@@ -294,7 +310,7 @@ int server_main(int requiredNumberOfPlayers)
                 else if (strcmp(cmd, "exchange") == 0) {
                     sscanf(buffer, "%*s %*s %s %s", parama, paramb);
                     char msg[BUFFER_SIZE];
-                    perform_exchange(g, &sd, parama, paramb, 1, msg);
+                    perform_exchange(g, &sd, parama, paramb, msg);
                     send_to_index(&sd, idx, msg);
                     char bc[BUFFER_SIZE*2];
                     broadcast_msg(&sd, bc);
@@ -303,6 +319,14 @@ int server_main(int requiredNumberOfPlayers)
                 }
 
                 else if (strcmp(cmd, "end") == 0) {
+                    if (check_victory(&sd)) {
+                        char bc[BUFFER_SIZE*2];
+                        snprintf(bc, sizeof(bc), "[BCAST] Player '%s' won the game!\n", cname);
+                        broadcast_msg(&sd, bc);
+                        broadcast_msg(&sd, "shutdown");
+                        running = false;
+                        continue;
+                    }
                     char bc[BUFFER_SIZE*2];
                     snprintf(bc, sizeof(bc), "[BCAST] Player '%s' ended turn.\n", cname);
                     broadcast_msg(&sd, bc);

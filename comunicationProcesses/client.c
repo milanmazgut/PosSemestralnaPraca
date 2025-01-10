@@ -107,7 +107,6 @@ int client_main(const char *clientName) {
             char msg[BUFFER_SIZE];
             snprintf(msg, sizeof(msg), "%s shutdown", cd.name);
             write(cd.serverFd, msg, strlen(msg));
-            atomic_store(&cd.running, 0);
         }
         if (atomic_load(&cd.running)) {
             char msg[BUFFER_SIZE];

@@ -22,7 +22,9 @@ typedef struct {
     Client clients[MAX_CLIENTS];
     int clientCount;
     int activeIndex;
+    pthread_mutex_t mut;
 } ServerData;
+
 
 int server_main(int requiredNumberOfPlayers);
 int find_client(ServerData *sd, const char* name);
@@ -36,5 +38,6 @@ int get_animal_type(const char *animalName);
 void perform_exchange(game *g, ServerData *sd, const char *animalIn, const char *animalOut, char * output);
 int check_action_count(ServerData *sd, int index);
 player* get_active_player(ServerData *sd);
-
+int* inventory_look(ServerData *sd, int playerIndex);
+int* syn_inventories_look(ServerData* sd, int playerIndex);
 #endif // SERVER_H

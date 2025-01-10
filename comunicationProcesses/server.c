@@ -10,6 +10,7 @@
 #include <errno.h>
 
 
+
 int find_client(ServerData *sd, const char* name) {
     for (int i = 0; i < sd->clientCount; i++) {
         if (sd->clients[i].active && strcmp(sd->clients[i].name, name) == 0) {
@@ -374,3 +375,26 @@ int server_main(int requiredNumberOfPlayers)
     fflush(stdout);
     return 0;
 }
+
+int* inventory_look(ServerData* sd, int playerIndex) {
+    int* inv_cpy = malloc(sizeof(int) * FOX);
+    if (!inv_cpy) {
+        return NULL;
+    }
+    for (int i = 0; i < FOX; ++i) {
+        inv_cpy[i] = sd->clients[playerIndex].player_.playerAnimals[i];
+    }
+    return inv_cpy;
+}
+
+//vysledok zo syn_inventory_look treba ukladat do premennej a potom na konci pouzivania treba dat free(premenna)
+int* syn_inventory_look(ServerData* sd, int playerIndex) {
+    pthread_mutex_lock(&sd->mut);
+    int* ar = inventory_look(sd, playerIndex);
+    pthread_mutex_unlock(&sd->mut);
+    return ar;
+}
+
+
+
+

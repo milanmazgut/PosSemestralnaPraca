@@ -159,7 +159,7 @@ int get_animal_type(const char *animalName) {
     return -1;
 }
 
-void perform_exchange(game *game, ServerData *sd, const char *animalIn, const char *animalOut, char * output) {
+void perform_exchange(ServerData *sd, const char *animalIn, const char *animalOut, char * output) {
     int inType = get_animal_type(animalIn);
     int outType = get_animal_type(animalOut);
 
@@ -177,7 +177,7 @@ void perform_exchange(game *game, ServerData *sd, const char *animalIn, const ch
             return;
         }
 
-        _Bool success = exchange_animal(game, get_active_player(sd), inType, outType);
+        _Bool success = syn_shm_game_exchange_animal(sd.syn_game->game_, get_active_player(sd), inType, outType);
         if (success) {
             snprintf(output, BUFFER_SIZE, "Animals have been succesfuly changed\n");
         }
@@ -213,16 +213,17 @@ player* get_active_player(ServerData *sd) {
     return &sd->clients[sd->activeIndex].player_;
 }
 
-int server_main(int requiredNumberOfPlayers) 
+int server_main(int requiredNumberOfPlayers, shared_names names) 
 {
     int requiredCount = requiredNumberOfPlayers; 
     ServerData sd;
     sd.clientCount = 0;
     sd.activeIndex = -1;
+    sd.names = names;
     for (int i = 0; i < MAX_CLIENTS; i++) {
         sd.clients[i].active = false;
     }
-
+    
     printf("[SERVER] Creating PIPE '%s'\n", SERVER_PIPE);
     pipe_init(SERVER_PIPE);
 
@@ -280,7 +281,9 @@ int server_main(int requiredNumberOfPlayers)
             
             if (strcmp(cmd, "init") == 0 && !initialized) {
                 if (sd.clientCount == requiredCount) {
-                    game_init(g ,sd.clientCount);
+                    //obsahuje game init ktory tu bol pred tym
+                    shm_init(&sd.names, sd.clientCount);
+                    syn_shm_game_init(&sd.names);
                     char bc[BUFFER_SIZE*2];
                     snprintf(bc, sizeof(bc), "[BCAST] Game was successfuly initialzied for players %d\n", sd.clientCount);
                     broadcast_msg(&sd, bc);
@@ -303,7 +306,8 @@ int server_main(int requiredNumberOfPlayers)
             if (initialized) {
                 if (strcmp(cmd, "roll") == 0 && check_action_count(&sd, idx)) {
                     char bc[BUFFER_SIZE*2];
-                    player_roll_dice(g, get_active_player(&sd), bc);
+                    //obsahuje player_roll_dice ktory tu bol pred tym
+                    syn_shm_game_player_roll_dice(&sd.syn_game, get_active_player(&sd), bc);
                     broadcast_msg(&sd, bc);
                     continue;
                 }
@@ -371,6 +375,8 @@ int server_main(int requiredNumberOfPlayers)
     game_destroy(g);
     free(g);
     
+    shm_destroy(&sd.names);
+    syn_shm_buffer_destroy(&sd.names);
     printf("[SERVER] Shutdown.\n");
     fflush(stdout);
     return 0;

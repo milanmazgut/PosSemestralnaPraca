@@ -22,50 +22,47 @@ void game_init(game *this, int playerCount) {
 }
 
 void game_destroy(game *this) {
-  
+    
     shop_destroy(&this->shop);
     dice_destroy(&this->dice_1);
     dice_destroy(&this->dice_2);
 }
+
+
 
 void player_roll_dice(game *this, player* currentPlayer, char* output) {
     int dice_1;
     int dice_2;
     roll_dice(&this->dice_1, &dice_1);
     roll_dice(&this->dice_2, &dice_2);
-    snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n Nothing happens, continue playing or end your turn", animalNames[dice_1], animalNames[dice_2]);
-
+    snprintf(output, BUFFER_SIZE, "You dropped %s and %s", animalNames[dice_1], animalNames[dice_2]); 
     if ( dice_1 == dice_2) {
         change_animal_ownership(&this->shop, currentPlayer, dice_1, 1);
-        snprintf(output, BUFFER_SIZE, "You dropped %s and %s, you get %s", animalNames[dice_1], animalNames[dice_2], animalNames[dice_1]);
-
+        printf("success");
+        fflush(stdout);
     } else {
-
         if(dice_1 == FOX || dice_2 == FOX) {
             if (currentPlayer->playerAnimals[SMALL_DOG] == 1) {
-                snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n Your small dog sacrificed himself to save your rabbits from fox\n", animalNames[dice_1], animalNames[dice_2]);
                 change_animal_ownership(&this->shop, currentPlayer, SMALL_DOG, -1);
             } else {
-                snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n Fox has eaten all your rabbits\n", animalNames[dice_1], animalNames[dice_2]);
                 change_animal_ownership(&this->shop, currentPlayer, RABBIT, -currentPlayer->playerAnimals[RABBIT]);
             }
         }
         if(dice_1 == WOLF || dice_2 == WOLF) {
             if (currentPlayer->playerAnimals[BIG_DOG] == 1) {
-                snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n Your big dog sacrificed himself to save your sheeps, pigs and cows from wolf\n", animalNames[dice_1], animalNames[dice_2]);
                 change_animal_ownership(&this->shop, currentPlayer, BIG_DOG, -1);
             } else {
-                snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n Wolf has eaten all your sheeps, pigs and cows\n", animalNames[dice_1], animalNames[dice_2]);
                 change_animal_ownership(&this->shop, currentPlayer, SHEEP, -currentPlayer->playerAnimals[SHEEP]);
                 change_animal_ownership(&this->shop, currentPlayer, PIG, -currentPlayer->playerAnimals[PIG]);
                 change_animal_ownership(&this->shop, currentPlayer, COW, -currentPlayer->playerAnimals[COW]);
             }
         }
     }
+     
 }
 
 _Bool exchange_animal(game *this, player* currentPlayer, animalTypes in, animalTypes out) {
-    if (currentPlayer->playerAnimals[in] >= this->shop.prices[out] && this->shop.allAnimals[out] > 0) {
+    if (currentPlayer->playerAnimals[in] >= this->shop.prices[out]) {
         exchange_shop(&this->shop, currentPlayer, in, out);
         return true;
     } else {
@@ -73,11 +70,28 @@ _Bool exchange_animal(game *this, player* currentPlayer, animalTypes in, animalT
     }
 }
 
-
-
 void end_of_turn_animal_multiplication(game *this, player* currentPlayer) {
     for (int i = 0; i < ANIMAL_COUNT; i++) {
         change_animal_ownership(&this->shop, currentPlayer, i, currentPlayer->playerAnimals[i]/2);
+    }
+}
+//vracia vo forme zviera cena
+int** view_shop(game *this) {
+    int** shop_cpy = malloc(sizeof(int*) * FOX);
+    if(!shop_cpy) {
+        return NULL;
+    }
+    for(int i = 0; i < FOX; ++i) {
+        shop_cpy[i] = malloc(sizeof(int) * 2);
+        if(!shop_cpy[i]) {
+            for(int j = 0; j < i; ++j) {
+                free(shop_cpy[j]);
+            }
+            free(shop_cpy);
+            return NULL;
+        }
+        shop_cpy[i][0] = this->shop.allAnimals[i];
+        shop_cpy[i][1] = this->shop.prices[i];
     }
 }
 
@@ -109,6 +123,8 @@ void syn_game_destroy(syn_game* this) {
     game_destroy(this->game);
     free(this->game);
 }
+
+
 
 // void syn_turn(syn_game* this, int playerIndex) {
 //     pthread_mutex_lock(&this->mut);

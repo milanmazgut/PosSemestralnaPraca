@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include "game.h"
+#include "syn_shop.h"
 
 #define SERVER_PIPE "server_pipe"
 #define BUFFER_SIZE 1024
@@ -23,10 +24,12 @@ typedef struct {
     int clientCount;
     int activeIndex;
     pthread_mutex_t mut;
+    shared_names names;
+    synchronized_game syn_game;
 } ServerData;
 
 
-int server_main(int requiredNumberOfPlayers);
+int server_main(int requiredNumberOfPlayers, shared_names names);
 int find_client(ServerData *sd, const char* name);
 int add_client(ServerData *sd, const char* name);
 void remove_client(ServerData *sd, int idx);
@@ -35,7 +38,7 @@ void send_to_index(ServerData *sd, int idx, const char* msg);
 void next_turn(ServerData *sd);
 const char* get_active_name(ServerData *sd);
 int get_animal_type(const char *animalName);
-void perform_exchange(game *g, ServerData *sd, const char *animalIn, const char *animalOut, char * output);
+void perform_exchange(ServerData *sd, const char *animalIn, const char *animalOut, char * output);
 int check_action_count(ServerData *sd, int index);
 player* get_active_player(ServerData *sd);
 int* inventory_look(ServerData *sd, int playerIndex);

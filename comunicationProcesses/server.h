@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include "game.h"
+#include "names.h"
 #include "syn_game.h"
 
 #define SERVER_PIPE "server_pipe"

@@ -1,5 +1,7 @@
 #include "server.h"
 #include "enums.h"
+#include "names.h"
+#include "shm.h"
 #include "syn_game.h"
 #include "pipe.h"
 
@@ -242,7 +244,6 @@ int server_main(int requiredNumberOfPlayers)
         sd.clients[i].active = false;
     }
     shm_init(&sd.names, requiredCount);
-    syn_shm_game_init(&sd.syn_game, requiredCount ,&sd.names);
     printf("[SERVER] Creating PIPE '%s'\n", SERVER_PIPE);
     pipe_init(SERVER_PIPE);
 
@@ -255,8 +256,10 @@ int server_main(int requiredNumberOfPlayers)
     bool running = true;
     bool initialized = false;
 
-    game* g;
-    g = malloc(sizeof(game));
+    synchronized_game g;
+   
+    sd.syn_game = g;
+    
 
     while (running) {
         char buffer[BUFFER_SIZE];
@@ -301,7 +304,7 @@ int server_main(int requiredNumberOfPlayers)
                     broadcast_msg(&sd, bc); //TODO exclude 
                     
                     if (!initialized) {
-                        game_init(g ,sd.clientCount);
+                        syn_shm_game_init(&sd.syn_game, requiredCount ,&sd.names);
                         initialized = true;
                     }
                 } 
@@ -334,11 +337,10 @@ int server_main(int requiredNumberOfPlayers)
             if (initialized) {
                 if (strcmp(cmd, "roll") == 0 && check_action_count(&sd, idx)) {
                     char msg[BUFFER_SIZE*2];
-                    player_roll_dice(g, get_active_player(&sd), msg);
+                    syn_shm_game_player_roll_dice(&sd.syn_game, get_active_player(&sd), msg);
                     send_to_index(&sd, idx, msg);
                     char bc[BUFFER_SIZE*2];
                     //obsahuje player_roll_dice ktory tu bol pred tym
-                    syn_shm_game_player_roll_dice(&sd.syn_game, get_active_player(&sd), bc);
                     snprintf(bc, sizeof(bc), "Player %s performed a roll.\n", cname);
                     broadcast_msg(&sd, bc);
                     continue;
@@ -401,11 +403,9 @@ int server_main(int requiredNumberOfPlayers)
     pipe_close(server_fd);
     pipe_destroy(SERVER_PIPE);
 
-    game_destroy(g);
-    free(g);
     
+    syn_shm_game_destroy(&sd.names, &sd.syn_game);
     shm_destroy(&sd.names);
-    syn_shm_game_destroy(&sd.names);
     clear_names(&names);
     printf("[SERVER] Shutdown.\n");
     fflush(stdout);

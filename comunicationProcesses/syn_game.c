@@ -2,12 +2,14 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include "syn_game.h"
+#include "game.h"
 #include "shm.h"
 
 void syn_shm_game_init(synchronized_game* this, int player_count ,shared_names *names) {
   printf("Creating semaphore with name: %s\n", names->mut_pc_);
   fflush(stdout);
-  
+  game g;
+  this->game_ = malloc(sizeof(g));
   this->mut_pc_ = sem_open(names->mut_pc_, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1);
   if (this->mut_pc_ == SEM_FAILED) {
     perror("Failed to open mutex PC");
@@ -16,11 +18,14 @@ void syn_shm_game_init(synchronized_game* this, int player_count ,shared_names *
   game_init(this->game_, player_count);
 }
 
-void syn_shm_game_destroy(shared_names *names) {
+void syn_shm_game_destroy(shared_names *names, synchronized_game *syn_game) {
+  syn_shm_game_close(syn_game);
   if (sem_unlink(names->mut_pc_) == -1) {
     perror("Failed to unlink mit PC");
     exit(EXIT_FAILURE);
   }
+  game_destroy(syn_game->game_);
+  free(syn_game->game_);
 }
 
 void syn_shm_game_open(synchronized_game *this, shared_names *names) {
@@ -54,17 +59,13 @@ void syn_shm_game_player_roll_dice(synchronized_game *this, player* currentPlaye
     printf("unlocked");
     fflush(stdout);
     */
-    printf("Tu som nigga\n");
-    fflush(stdout);
+    
     sem_wait(this->mut_pc_);  // Lock the semaphore
-    printf("Tu som nigga2\n");
-    fflush(stdout);
+    
     player_roll_dice(this->game_, currentPlayer, output);
-    printf("Tu som nigga3\n");
-    fflush(stdout);
+    
     sem_post(this->mut_pc_);
-    printf("Tu som nigga4\n");
-    fflush(stdout);
+    
 }
 
 _Bool syn_shm_game_exchange_animal(synchronized_game *this, player* currentPlayer, animalTypes in, animalTypes out) {

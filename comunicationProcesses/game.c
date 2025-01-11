@@ -36,7 +36,7 @@ void player_roll_dice(game *this, player* currentPlayer, char* output) {
     
     roll_dice(&this->dice_1, &dice_1);
     roll_dice(&this->dice_2, &dice_2);
-    snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n Nothing happens, continue playing or end your turn", animalNames[dice_1], animalNames[dice_2]);
+    snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n> Nothing happens, continue playing or end your turn", animalNames[dice_1], animalNames[dice_2]);
 
     if ( dice_1 == dice_2) {
         change_animal_ownership(&this->shop, currentPlayer, dice_1, 1);
@@ -46,19 +46,19 @@ void player_roll_dice(game *this, player* currentPlayer, char* output) {
 
         if(dice_1 == FOX || dice_2 == FOX) {
             if (currentPlayer->playerAnimals[SMALL_DOG] == 1) {
-                snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n Your small dog sacrificed himself to save your rabbits from fox\n", animalNames[dice_1], animalNames[dice_2]);
+                snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n> Your small dog sacrificed himself to save your rabbits from fox\n", animalNames[dice_1], animalNames[dice_2]);
                 change_animal_ownership(&this->shop, currentPlayer, SMALL_DOG, -1);
             } else {
-                snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n Fox has eaten all your rabbits\n", animalNames[dice_1], animalNames[dice_2]);
+                snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n> Fox has eaten all your rabbits\n", animalNames[dice_1], animalNames[dice_2]);
                 change_animal_ownership(&this->shop, currentPlayer, RABBIT, -currentPlayer->playerAnimals[RABBIT]);
             }
         }
         if(dice_1 == WOLF || dice_2 == WOLF) {
             if (currentPlayer->playerAnimals[BIG_DOG] == 1) {
-                snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n Your big dog sacrificed himself to save your sheeps, pigs and cows from wolf\n", animalNames[dice_1], animalNames[dice_2]);
+                snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n> Your big dog sacrificed himself to save your sheeps, pigs and cows from wolf\n", animalNames[dice_1], animalNames[dice_2]);
                 change_animal_ownership(&this->shop, currentPlayer, BIG_DOG, -1);
             } else {
-                snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n Wolf has eaten all your sheeps, pigs and cows\n", animalNames[dice_1], animalNames[dice_2]);
+                snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n> Wolf has eaten all your sheeps, pigs and cows\n", animalNames[dice_1], animalNames[dice_2]);
                 change_animal_ownership(&this->shop, currentPlayer, SHEEP, -currentPlayer->playerAnimals[SHEEP]);
                 change_animal_ownership(&this->shop, currentPlayer, PIG, -currentPlayer->playerAnimals[PIG]);
                 change_animal_ownership(&this->shop, currentPlayer, COW, -currentPlayer->playerAnimals[COW]);
@@ -68,7 +68,7 @@ void player_roll_dice(game *this, player* currentPlayer, char* output) {
 }
 
 _Bool exchange_animal(game *this, player* currentPlayer, animalTypes in, animalTypes out) {
-    if (currentPlayer->playerAnimals[in] >= this->shop.prices[out]) {
+    if (currentPlayer->playerAnimals[in] >= this->shop.prices[in] && this->shop.allAnimals[out] > 0) {
         exchange_shop(&this->shop, currentPlayer, in, out);
         return true;
     } else {

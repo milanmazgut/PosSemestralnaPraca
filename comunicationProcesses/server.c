@@ -92,20 +92,22 @@ void broadcast_msg(ServerData *sd, const char* msg) {
             i++;
             continue;
         }
-        ssize_t w = write(sd->clients[i].fd, msg, strlen(msg));
-        if (w < 0) {
-            if (errno == EPIPE) {
-                printf("[SERVER] Detected client '%s' left (EPIPE on broadcast).\n", sd->clients[i].name);
-                fflush(stdout);
+        if (get_active_player(sd) != &sd->clients[i].player_) {
+            ssize_t w = write(sd->clients[i].fd, msg, strlen(msg));
+            if (w < 0) {
+                if (errno == EPIPE) {
+                    printf("[SERVER] Detected client '%s' left (EPIPE on broadcast).\n", sd->clients[i].name);
+                    fflush(stdout);
 
-                char bc[BUFFER_SIZE*2];
-                snprintf(bc, sizeof(bc), "[BCAST] Player '%s' disconnected.\n", sd->clients[i].name);
-                remove_client(sd, i);
-                broadcast_msg(sd, bc);
-                // remove_client() presunie i na koniec ==> nerobime i++
-                continue;
-            } else {
-                perror("[SERVER] write(broadcast)");
+                    char bc[BUFFER_SIZE*2];
+                    snprintf(bc, sizeof(bc), "[BCAST] Player '%s' disconnected.\n", sd->clients[i].name);
+                    remove_client(sd, i);
+                    broadcast_msg(sd, bc);
+                    // remove_client() presunie i na koniec ==> nerobime i++
+                    continue;
+                } else {
+                    perror("[SERVER] write(broadcast).\n");
+                }
             }
         }
         i++;
@@ -129,7 +131,7 @@ void send_to_index(ServerData *sd, int idx, const char* msg) {
             remove_client(sd, idx);
             broadcast_msg(sd, bc);
         } else {
-            perror("[SERVER] write(send_to_index)");
+            perror("[SERVER] write(send_to_index).\n");
         }
     }
 }
@@ -191,7 +193,7 @@ void perform_exchange(game *game, ServerData *sd, const char *animalIn, const ch
 int check_action_count(ServerData *sd, int index) { //returns 1 if player can use roll command
     if(sd->clients[sd->activeIndex].performedAction == 1) {
         char noActionMsg[BUFFER_SIZE*2];
-        snprintf(noActionMsg, sizeof(noActionMsg), "[SERVER] You already used roll this turn.");
+        snprintf(noActionMsg, sizeof(noActionMsg), "[SERVER] You already used roll this turn.\n");
         send_to_index(sd, index, noActionMsg);
         return 0;
         }
@@ -265,31 +267,41 @@ int server_main(int requiredNumberOfPlayers)
                 continue;
             }
         
+            if (strcmp(cmd, "join") == 0) {
+                char msg[BUFFER_SIZE*2];
+                snprintf(msg, sizeof(msg), "You have successfully joined the game. Players joined: %d/%d.\n", sd.clientCount, requiredCount);
+                send_to_index(&sd,idx,msg);
+                if (sd.clientCount < requiredCount) {
+                    char bc[BUFFER_SIZE*2];
+                    snprintf(bc, sizeof(bc), "Player %s joined. Waiting for all players %d/%d.\n",cname, sd.clientCount, requiredCount);
+                    broadcast_msg(&sd, bc);
+                } else {
+                    char bc[BUFFER_SIZE*2];
+
+                    snprintf(bc, sizeof(bc), "Player %s joined. Game is starting for %d players.\n", cname, sd.clientCount);
+                    broadcast_msg(&sd, bc);
+                    if (!initialized) {
+                        game_init(g ,sd.clientCount);
+                        initialized = true;
+                    }
+                } 
+                continue;
+            }
 
             if (strcmp(cmd, "quit") == 0) {
                 send_to_index(&sd, idx, "shutdown");
-
                 remove_client(&sd, idx);
-                
                 char bc[BUFFER_SIZE*2];
                 snprintf(bc, sizeof(bc), "[BCAST] Player '%s' left the game.\n", cname);
                 broadcast_msg(&sd, bc);
                 continue;
             }
-            
-            if (strcmp(cmd, "init") == 0 && !initialized) {
-                if (sd.clientCount == requiredCount) {
-                    game_init(g ,sd.clientCount);
-                    char bc[BUFFER_SIZE*2];
-                    snprintf(bc, sizeof(bc), "[BCAST] Game was successfuly initialzied for players %d\n", sd.clientCount);
-                    broadcast_msg(&sd, bc);
-                    initialized = true;
-                } else {
-                    char bc[BUFFER_SIZE*2];
-                    snprintf(bc, sizeof(bc), "You have successfully joined the game. Waiting for all players %d/%d", sd.clientCount, requiredCount);
-                    send_to_index(&sd,idx,bc);
-                }
-                continue;
+
+            if (strcmp(cmd, "shutdown") == 0) {
+                    send_to_index(&sd, idx, "[SERVER] Shutting down...\n");
+                    broadcast_msg(&sd, "[BCAST] *** SERVER shutting down ***\n");
+                    broadcast_msg(&sd, "shutdown");
+                    running = false;
             }
             
             if (idx != sd.activeIndex) {
@@ -301,9 +313,10 @@ int server_main(int requiredNumberOfPlayers)
             
             if (initialized) {
                 if (strcmp(cmd, "roll") == 0 && check_action_count(&sd, idx)) {
-                    char bc[BUFFER_SIZE*2];
-                    player_roll_dice(g, get_active_player(&sd), bc);
-                    broadcast_msg(&sd, bc);
+                    char msg[BUFFER_SIZE*2];
+                    player_roll_dice(g, get_active_player(&sd), msg);
+                    send_to_index(&sd, idx, msg);
+                    broadcast_msg(&sd, "Player %s performed a roll.\n");
                     continue;
                 }
 
@@ -312,8 +325,8 @@ int server_main(int requiredNumberOfPlayers)
                     char msg[BUFFER_SIZE];
                     perform_exchange(g, &sd, parama, paramb, msg);
                     send_to_index(&sd, idx, msg);
-                    char bc[BUFFER_SIZE*2];
-                    broadcast_msg(&sd, bc);
+                    // char bc[BUFFER_SIZE*2];
+                    // broadcast_msg(&sd, bc);
                     continue;
                 
                 }
@@ -323,6 +336,7 @@ int server_main(int requiredNumberOfPlayers)
                         char bc[BUFFER_SIZE*2];
                         snprintf(bc, sizeof(bc), "[BCAST] Player '%s' won the game!\n", cname);
                         broadcast_msg(&sd, bc);
+                        send_to_index(&sd, idx, "You have won the game!!!");
                         broadcast_msg(&sd, "shutdown");
                         running = false;
                         continue;
@@ -331,17 +345,13 @@ int server_main(int requiredNumberOfPlayers)
                     snprintf(bc, sizeof(bc), "[BCAST] Player '%s' ended turn.\n", cname);
                     broadcast_msg(&sd, bc);
                     next_turn(&sd);
+                    send_to_index(&sd, idx, "Now it is your turn "); //TODO vsetky mozne komandy
                     snprintf(bc, sizeof(bc), "[BCAST] Now it is '%s' turn.\n", get_active_name(&sd));
                     broadcast_msg(&sd, bc);
                     sd.clients[sd.activeIndex].performedAction = 0;
                     continue;
                 }
-                else if (strcmp(cmd, "shutdown") == 0) {
-                    send_to_index(&sd, idx, "[SERVER] Shutting down...\n");
-                    broadcast_msg(&sd, "[BCAST] *** SERVER shutting down ***\n");
-                    broadcast_msg(&sd, "shutdown");
-                    running = false;
-                }
+                
                 else if (strcmp(cmd, "inventory") == 0) {
                     //TODO show player inventory functionality
                     continue;

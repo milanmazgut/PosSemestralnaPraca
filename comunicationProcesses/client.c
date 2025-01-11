@@ -1,7 +1,6 @@
 #include "client.h"
 #include "pipe.h"
 
-#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +9,6 @@
 
 #define BUFFER_SIZE 256
 #define SERVER_PIPE "server_pipe"
-
 
 typedef struct {
     char name[BUFFER_SIZE];
@@ -35,16 +33,13 @@ static void* reader_thread(void* arg) {
             if (buf[n - 1] != '\n') {
                 printf("\n");
             }
-            fflush(stdout);
             
             if (strcmp(buf, "shutdown") == 0) {
-            printf("[CLIENT %s] Shutdown received, exiting.\n", cd->name);
             atomic_store(&cd->running, 0);
             }
+            fflush(stdout);
         } 
         else if (n == 0) {
-            printf("[CLIENT %s] Server closed my pipe => end.\n", cd->name);
-            fflush(stdout);
             atomic_store(&cd->running, 0);
         } 
         else {
@@ -72,8 +67,13 @@ int client_main(const char *clientName) {
     printf("[CLIENT %s] Opening server PIPE '%s' for writing...\n", cd.name, SERVER_PIPE);
     cd.serverFd = pipe_open_write(SERVER_PIPE);
 
+    char joinmsg[BUFFER_SIZE];
+    snprintf(joinmsg, sizeof(joinmsg), "%s join", cd.name);
+    write(cd.serverFd, joinmsg, strlen(joinmsg));
+    
     printf("[CLIENT %s] Opening '%s' \n", cd.name, cd.pipePath);
-    cd.pipeFd = pipe_open_read_write(cd.pipePath);
+    cd.pipeFd = pipe_open_read(cd.pipePath);
+    
     if (cd.pipeFd < 0) {
         perror("[CLIENT] open");
         return 2;
@@ -107,6 +107,7 @@ int client_main(const char *clientName) {
             char msg[BUFFER_SIZE];
             snprintf(msg, sizeof(msg), "%s shutdown", cd.name);
             write(cd.serverFd, msg, strlen(msg));
+            atomic_store(&cd.running, 0);
         }
         if (atomic_load(&cd.running)) {
             char msg[BUFFER_SIZE];
@@ -124,7 +125,6 @@ int client_main(const char *clientName) {
 
     pipe_close(cd.pipeFd);
     pipe_close(cd.serverFd);
-
     pipe_destroy(cd.pipePath);
 
     printf("[CLIENT %s] Exited.\n", cd.name);

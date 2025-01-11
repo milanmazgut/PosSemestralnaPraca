@@ -10,7 +10,7 @@ typedef struct synchronized_game {
     sem_t *mut_pc_;
 } synchronized_game;
 
-void syn_shm_game_init(shared_names *names);
+void syn_shm_game_init(synchronized_game* gamePtr, int player_count,shared_names *names);
 void syn_shm_game_destroy(shared_names *names);
 void syn_shm_game_open(synchronized_game *gamePtr, shared_names *names);
 void syn_shm_game_close(synchronized_game *gamePtr);

@@ -9,7 +9,20 @@
 #include <unistd.h>
 #include <errno.h>
 
+char* add_suffix(const char* name, const char* suffix) {
+    int name_len = strlen(name);
+    int suffix_len = strlen(suffix);
+    char* result = malloc((name_len + suffix_len + 2) * sizeof(char));
+    strcpy(result, name);
+    result[name_len] = '-';
+    strcpy(result + name_len + 1, suffix);
+    return result;
+}
 
+void clear_names(shared_names* names) {
+    free(names->shm_name_);
+    free(names->mut_pc_);
+}
 
 int find_client(ServerData *sd, const char* name) {
     for (int i = 0; i < sd->clientCount; i++) {
@@ -213,8 +226,11 @@ player* get_active_player(ServerData *sd) {
     return &sd->clients[sd->activeIndex].player_;
 }
 
-int server_main(int requiredNumberOfPlayers, shared_names names) 
+int server_main(int requiredNumberOfPlayers) 
 {
+    shared_names names;
+    names.shm_name_ = add_suffix("SHM", "farma");
+    names.mut_pc_ = add_suffix("MUT-PC", "farma");
     int requiredCount = requiredNumberOfPlayers; 
     ServerData sd;
     sd.clientCount = 0;
@@ -223,7 +239,8 @@ int server_main(int requiredNumberOfPlayers, shared_names names)
     for (int i = 0; i < MAX_CLIENTS; i++) {
         sd.clients[i].active = false;
     }
-    
+    shm_init(&sd.names, requiredCount);
+    syn_shm_game_init(&sd.syn_game, requiredCount ,&sd.names);
     printf("[SERVER] Creating PIPE '%s'\n", SERVER_PIPE);
     pipe_init(SERVER_PIPE);
 
@@ -283,8 +300,9 @@ int server_main(int requiredNumberOfPlayers, shared_names names)
                 if (sd.clientCount == requiredCount) {
                     //obsahuje game init ktory tu bol pred tym
                     if(!initialized) {
-                        shm_init(&sd.names, sd.clientCount);
-                        syn_shm_game_init(&sd.names);
+                        
+                        printf("Inicialyzovane shm a syn shm game\n");
+                        fflush(stdout); 
                     }
                     char bc[BUFFER_SIZE*2];
                     snprintf(bc, sizeof(bc), "[BCAST] Game was successfuly initialzied for players %d\n", sd.clientCount);
@@ -381,6 +399,7 @@ int server_main(int requiredNumberOfPlayers, shared_names names)
     
     shm_destroy(&sd.names);
     syn_shm_game_destroy(&sd.names);
+    clear_names(&names);
     printf("[SERVER] Shutdown.\n");
     fflush(stdout);
     return 0;

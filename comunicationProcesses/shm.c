@@ -9,8 +9,13 @@
 void shm_init(shared_names *names, int number_of_players) {
     const int fd_shm = shm_open(names->shm_name_, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
     if (fd_shm == -1) {
+      if(errno == EEXIST) {
+        shm_unlink(names->shm_name_);
+        shm_init(names, number_of_players);
+      } else {
         perror("Failed to create shared memory");
         exit(EXIT_FAILURE);
+      }
     }
     if (ftruncate(fd_shm, sizeof(game)) == -1) {
         perror("Failed to truncate shared memory");

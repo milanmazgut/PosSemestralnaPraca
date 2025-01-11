@@ -29,7 +29,7 @@ typedef struct {
 } ServerData;
 
 
-int server_main(int requiredNumberOfPlayers, shared_names names);
+int server_main(int requiredNumberOfPlayers);
 int find_client(ServerData *sd, const char* name);
 int add_client(ServerData *sd, const char* name);
 void remove_client(ServerData *sd, int idx);

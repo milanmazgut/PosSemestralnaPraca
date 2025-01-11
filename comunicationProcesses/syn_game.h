@@ -18,3 +18,5 @@ void syn_shm_game_player_roll_dice(synchronized_game *gamePtr, player* currentPl
 _Bool syn_shm_game_exchange_animal(synchronized_game *gamePtr, player* currentPlayer, animalTypes in, animalTypes out);
 void syn_shm_game_end_of_turn_animal_multiplication(synchronized_game *gamePtr, player* currentPlayer);
 int** syn_shm_game_view_shop(synchronized_game *gamePtr);
+
+#endif

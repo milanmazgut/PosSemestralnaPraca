@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 #include "game.h"
-#include "syn_shop.h"
+#include "syn_game.h"
 
 #define SERVER_PIPE "server_pipe"
 #define BUFFER_SIZE 1024

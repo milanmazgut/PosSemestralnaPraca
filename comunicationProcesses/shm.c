@@ -29,7 +29,7 @@ void shm_destroy(shared_names *names) {
   }
 }
 
-void shm_shop_open(shared_names *names, game **out_game, int *out_fd_shm) {
+void shm_game_open(shared_names *names, game **out_game, int *out_fd_shm) {
   const int fd_shm = shm_open(names->shm_name_, O_RDWR, 0);
   if (fd_shm == -1) {
     perror("Failed to open shared memory");
@@ -41,10 +41,10 @@ void shm_shop_open(shared_names *names, game **out_game, int *out_fd_shm) {
     exit(EXIT_FAILURE);
   }
   *out_fd_shm = fd_shm;
-  *out_game = sh;
+  *out_game = g;
 }
 
-void shm_buffer_close(int fd_shm, game *g) {
+void shm_game_close(int fd_shm, game *g) {
   if (munmap(g, sizeof(game)) == -1) {
     perror("Failed to unmap shared memory");
     exit(EXIT_FAILURE);

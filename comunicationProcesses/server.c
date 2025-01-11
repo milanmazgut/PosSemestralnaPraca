@@ -1,6 +1,6 @@
 #include "server.h"
 #include "enums.h"
-#include "game.h"
+#include "syn_game.h"
 #include "pipe.h"
 
 #include <stdio.h>
@@ -177,7 +177,7 @@ void perform_exchange(ServerData *sd, const char *animalIn, const char *animalOu
             return;
         }
 
-        _Bool success = syn_shm_game_exchange_animal(sd.syn_game->game_, get_active_player(sd), inType, outType);
+        _Bool success = syn_shm_game_exchange_animal(&sd->syn_game, get_active_player(sd), inType, outType);
         if (success) {
             snprintf(output, BUFFER_SIZE, "Animals have been succesfuly changed\n");
         }
@@ -282,8 +282,10 @@ int server_main(int requiredNumberOfPlayers, shared_names names)
             if (strcmp(cmd, "init") == 0 && !initialized) {
                 if (sd.clientCount == requiredCount) {
                     //obsahuje game init ktory tu bol pred tym
-                    shm_init(&sd.names, sd.clientCount);
-                    syn_shm_game_init(&sd.names);
+                    if(!initialized) {
+                        shm_init(&sd.names, sd.clientCount);
+                        syn_shm_game_init(&sd.names);
+                    }
                     char bc[BUFFER_SIZE*2];
                     snprintf(bc, sizeof(bc), "[BCAST] Game was successfuly initialzied for players %d\n", sd.clientCount);
                     broadcast_msg(&sd, bc);
@@ -307,6 +309,8 @@ int server_main(int requiredNumberOfPlayers, shared_names names)
                 if (strcmp(cmd, "roll") == 0 && check_action_count(&sd, idx)) {
                     char bc[BUFFER_SIZE*2];
                     //obsahuje player_roll_dice ktory tu bol pred tym
+                    printf("roll accepted");
+                    fflush(stdout);
                     syn_shm_game_player_roll_dice(&sd.syn_game, get_active_player(&sd), bc);
                     broadcast_msg(&sd, bc);
                     continue;
@@ -315,7 +319,7 @@ int server_main(int requiredNumberOfPlayers, shared_names names)
                 else if (strcmp(cmd, "exchange") == 0) {
                     sscanf(buffer, "%*s %*s %s %s", parama, paramb);
                     char msg[BUFFER_SIZE];
-                    perform_exchange(g, &sd, parama, paramb, msg);
+                    perform_exchange(&sd, parama, paramb, msg);
                     send_to_index(&sd, idx, msg);
                     char bc[BUFFER_SIZE*2];
                     broadcast_msg(&sd, bc);
@@ -376,7 +380,7 @@ int server_main(int requiredNumberOfPlayers, shared_names names)
     free(g);
     
     shm_destroy(&sd.names);
-    syn_shm_buffer_destroy(&sd.names);
+    syn_shm_game_destroy(&sd.names);
     printf("[SERVER] Shutdown.\n");
     fflush(stdout);
     return 0;

@@ -4,7 +4,7 @@
 
 #include "server.h"
 #include "client.h"
-#include "syn_shop.h"
+#include "syn_game.h"
 
 char* add_suffix(const char* name, const char* suffix) {
     int name_len = strlen(name);
@@ -37,9 +37,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Missing number of required clients.\n");
             return 1;
         }
-        shm_init(&names);
-        syn_sym_shop_init(&names);
-        return server_main(atoi(argv[2]));
+        return server_main(atoi(argv[2]), names);
     }
     else if (strcmp(argv[1], "client") == 0) {
         if (argc < 3) {

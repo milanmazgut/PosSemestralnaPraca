@@ -277,9 +277,10 @@ int server_main(int requiredNumberOfPlayers)
                     broadcast_msg(&sd, bc);
                 } else {
                     char bc[BUFFER_SIZE*2];
-
+                    send_to_index(&sd, idx, "Game is starting.\n");
                     snprintf(bc, sizeof(bc), "Player %s joined. Game is starting for %d players.\n", cname, sd.clientCount);
-                    broadcast_msg(&sd, bc);
+                    broadcast_msg(&sd, bc); //TODO exclude 
+                    
                     if (!initialized) {
                         game_init(g ,sd.clientCount);
                         initialized = true;
@@ -316,7 +317,9 @@ int server_main(int requiredNumberOfPlayers)
                     char msg[BUFFER_SIZE*2];
                     player_roll_dice(g, get_active_player(&sd), msg);
                     send_to_index(&sd, idx, msg);
-                    broadcast_msg(&sd, "Player %s performed a roll.\n");
+                    char bc[BUFFER_SIZE*2];
+                    snprintf(bc, sizeof(bc), "Player %s performed a roll.\n", cname);
+                    broadcast_msg(&sd, bc);
                     continue;
                 }
 

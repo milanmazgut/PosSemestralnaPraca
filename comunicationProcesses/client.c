@@ -34,9 +34,12 @@ static void* reader_thread(void* arg) {
                 printf("\n");
             }
             
+            
             if (strcmp(buf, "shutdown") == 0) {
-            atomic_store(&cd->running, 0);
+                atomic_store(&cd->running, 0);
+                
             }
+
             fflush(stdout);
         } 
         else if (n == 0) {
@@ -46,6 +49,8 @@ static void* reader_thread(void* arg) {
             perror("[CLIENT read]");
             atomic_store(&cd->running, 0);
         }
+        printf("> ");
+        fflush(stdout);
     }
     return NULL;
 }
@@ -86,7 +91,7 @@ int client_main(const char *clientName) {
     }
 
     while (atomic_load(&cd.running)) {
-        printf("[CLIENT %s] > ", cd.name);
+        printf("> ");
         fflush(stdout);
 
         char line[BUFFER_SIZE];
@@ -115,18 +120,13 @@ int client_main(const char *clientName) {
             write(cd.serverFd, msg, strlen(msg));
         }    
     }
-
-    printf("End of this player");
-    fflush(stdout);
     pthread_join(tid, NULL);
-
-    printf("End of player read thread");
-    fflush(stdout);
 
     pipe_close(cd.pipeFd);
     pipe_close(cd.serverFd);
     pipe_destroy(cd.pipePath);
 
-    printf("[CLIENT %s] Exited.\n", cd.name);
+    printf("Game has ended press enter to exit.\n");
+    fflush(stdout);
     return 0;
 }

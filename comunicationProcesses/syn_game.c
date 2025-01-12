@@ -45,7 +45,7 @@ void syn_shm_game_close(synchronized_game *this) {
     }
 }
 
-void syn_shm_game_player_roll_dice(synchronized_game *this, player* currentPlayer, char* output) {
+void syn_shm_game_player_roll_dice(synchronized_game *this, player* currentPlayer, char* outputPlayer, char* outputOthers) {
     /*
     printf("Milan PC guru");
     fflush(stdout);
@@ -62,7 +62,7 @@ void syn_shm_game_player_roll_dice(synchronized_game *this, player* currentPlaye
     
     sem_wait(this->mut_pc_);  // Lock the semaphore
     
-    player_roll_dice(this->game_, currentPlayer, output);
+    player_roll_dice(this->game_, currentPlayer, outputPlayer, outputOthers);
     
     sem_post(this->mut_pc_);
     

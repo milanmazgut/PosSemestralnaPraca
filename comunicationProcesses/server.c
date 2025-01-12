@@ -157,7 +157,7 @@ void next_turn(ServerData *sd) {
         sd->activeIndex = -1;
         return;
     }
-    syn_shm_game_end_of_turn_animal_multiplication(sd->syn_game_->game_, get_active_player(sd));
+    syn_shm_game_end_of_turn_animal_multiplication(&sd->syn_game, get_active_player(sd));
     sd->activeIndex = (sd->activeIndex + 1) % sd->clientCount;
 }
 
@@ -175,6 +175,26 @@ int get_animal_type(const char *animalName) {
         }
     }
     return -1;
+}
+
+
+int* inventory_look(ServerData* sd, int playerIndex) {
+    int* inv_cpy = malloc(sizeof(int) * FOX);
+    if (!inv_cpy) {
+        return NULL;
+    }
+    for (int i = 0; i < FOX; ++i) {
+        inv_cpy[i] = sd->clients[playerIndex].player_.playerAnimals[i];
+    }
+    return inv_cpy;
+}
+
+//vysledok zo syn_inventory_look treba ukladat do premennej a potom na konci pouzivania treba dat free(premenna)
+int* syn_inventory_look(ServerData* sd, int playerIndex) {
+    pthread_mutex_lock(&sd->mut);
+    int* ar = inventory_look(sd, playerIndex);
+    pthread_mutex_unlock(&sd->mut);
+    return ar;
 }
 
 void perform_exchange(ServerData *sd, const char *animalIn, const char *animalOut, char * output) {
@@ -451,26 +471,3 @@ int server_main(int requiredNumberOfPlayers)
     fflush(stdout);
     return 0;
 }
-
-int* inventory_look(ServerData* sd, int playerIndex) {
-    int* inv_cpy = malloc(sizeof(int) * FOX);
-    if (!inv_cpy) {
-        return NULL;
-    }
-    for (int i = 0; i < FOX; ++i) {
-        inv_cpy[i] = sd->clients[playerIndex].player_.playerAnimals[i];
-    }
-    return inv_cpy;
-}
-
-//vysledok zo syn_inventory_look treba ukladat do premennej a potom na konci pouzivania treba dat free(premenna)
-int* syn_inventory_look(ServerData* sd, int playerIndex) {
-    pthread_mutex_lock(&sd->mut);
-    int* ar = inventory_look(sd, playerIndex);
-    pthread_mutex_unlock(&sd->mut);
-    return ar;
-}
-
-
-
-

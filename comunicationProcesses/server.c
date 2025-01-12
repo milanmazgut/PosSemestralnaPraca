@@ -1,6 +1,8 @@
 #include "server.h"
 #include "enums.h"
-#include "game.h"
+#include "names.h"
+#include "shm.h"
+#include "syn_game.h"
 #include "pipe.h"
 
 #include <stdio.h>
@@ -9,6 +11,20 @@
 #include <unistd.h>
 #include <errno.h>
 
+char* add_suffix(const char* name, const char* suffix) {
+    int name_len = strlen(name);
+    int suffix_len = strlen(suffix);
+    char* result = malloc((name_len + suffix_len + 2) * sizeof(char));
+    strcpy(result, name);
+    result[name_len] = '-';
+    strcpy(result + name_len + 1, suffix);
+    return result;
+}
+
+void clear_names(shared_names* names) {
+    free(names->shm_name_);
+    free(names->mut_pc_);
+}
 
 int find_client(ServerData *sd, const char* name) {
     for (int i = 0; i < sd->clientCount; i++) {
@@ -179,7 +195,7 @@ void perform_exchange(ServerData *sd, const char *animalIn, const char *animalOu
             return;
         }
 
-        _Bool success = syn_shm_game_exchange_animal(sd->syn_game_, get_active_player(sd), inType, outType);
+        _Bool success = syn_shm_game_exchange_animal(&sd->syn_game, get_active_player(sd), inType, outType);
         if (success) {
             snprintf(output, BUFFER_SIZE, "Animals have been succesfuly changed\n");
         }
@@ -255,14 +271,18 @@ player* get_active_player(ServerData *sd) {
 
 int server_main(int requiredNumberOfPlayers) 
 {
+    shared_names names;
+    names.shm_name_ = add_suffix("SHM", "farma");
+    names.mut_pc_ = add_suffix("MUT-PC", "farma");
     int requiredCount = requiredNumberOfPlayers; 
     ServerData sd;
     sd.clientCount = 0;
     sd.activeIndex = -1;
+    sd.names = names;
     for (int i = 0; i < MAX_CLIENTS; i++) {
         sd.clients[i].active = false;
     }
-
+    shm_init(&sd.names, requiredCount);
     printf("[SERVER] Creating PIPE '%s'\n", SERVER_PIPE);
     pipe_init(SERVER_PIPE);
 
@@ -275,8 +295,10 @@ int server_main(int requiredNumberOfPlayers)
     bool running = true;
     bool initialized = false;
 
-    game* g;
-    g = malloc(sizeof(game));
+    synchronized_game g;
+   
+    sd.syn_game = g;
+    
 
     while (running) {
         char buffer[BUFFER_SIZE];
@@ -321,7 +343,7 @@ int server_main(int requiredNumberOfPlayers)
                     broadcast_msg(&sd, bc); //TODO exclude 
                     
                     if (!initialized) {
-                        game_init(g ,sd.clientCount);
+                        syn_shm_game_init(&sd.syn_game, requiredCount ,&sd.names);
                         initialized = true;
                     }
                 } 
@@ -355,9 +377,10 @@ int server_main(int requiredNumberOfPlayers)
                 if (strcmp(cmd, "roll") == 0 && check_action_count(&sd, idx)) {
                     char msg[BUFFER_SIZE*2];
                     char msgOthers[BUFFER_SIZE*2];
-                    player_roll_dice(g, get_active_player(&sd), msg, msgOthers);
+                    syn_shm_game_player_roll_dice(&sd.syn_game, get_active_player(&sd), msg, msgOthers);
                     send_to_index(&sd, idx, msg);
                     char bc[BUFFER_SIZE*2];
+                    //obsahuje player_roll_dice ktory tu bol pred tym
                     snprintf(bc, sizeof(bc), "Player %s performed a roll.\n", cname);
                     broadcast_msg(&sd, bc);
                     continue;
@@ -366,7 +389,7 @@ int server_main(int requiredNumberOfPlayers)
                 else if (strcmp(cmd, "exchange") == 0) {
                     sscanf(buffer, "%*s %*s %s %s", parama, paramb);
                     char msg[BUFFER_SIZE];
-                    perform_exchange( &sd, parama, paramb, msg);
+                    perform_exchange(&sd, parama, paramb, msg);
                     send_to_index(&sd, idx, msg);
                     // char bc[BUFFER_SIZE*2];
                     // broadcast_msg(&sd, bc);
@@ -420,10 +443,34 @@ int server_main(int requiredNumberOfPlayers)
     pipe_close(server_fd);
     pipe_destroy(SERVER_PIPE);
 
-    game_destroy(g);
-    free(g);
     
+    syn_shm_game_destroy(&sd.names, &sd.syn_game);
+    shm_destroy(&sd.names);
+    clear_names(&names);
     printf("[SERVER] Shutdown.\n");
     fflush(stdout);
     return 0;
 }
+
+int* inventory_look(ServerData* sd, int playerIndex) {
+    int* inv_cpy = malloc(sizeof(int) * FOX);
+    if (!inv_cpy) {
+        return NULL;
+    }
+    for (int i = 0; i < FOX; ++i) {
+        inv_cpy[i] = sd->clients[playerIndex].player_.playerAnimals[i];
+    }
+    return inv_cpy;
+}
+
+//vysledok zo syn_inventory_look treba ukladat do premennej a potom na konci pouzivania treba dat free(premenna)
+int* syn_inventory_look(ServerData* sd, int playerIndex) {
+    pthread_mutex_lock(&sd->mut);
+    int* ar = inventory_look(sd, playerIndex);
+    pthread_mutex_unlock(&sd->mut);
+    return ar;
+}
+
+
+
+

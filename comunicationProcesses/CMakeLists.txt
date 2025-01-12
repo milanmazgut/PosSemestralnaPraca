@@ -16,6 +16,8 @@ add_executable(program
     dice.c
     shop.c
     enums.c
+    syn_game.c
+    shm.c
 )
 
 target_link_libraries(program pthread)

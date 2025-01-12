@@ -4,6 +4,8 @@
 
 #include "server.h"
 #include "client.h"
+#include "syn_game.h"
+
 
 
 int main(int argc, char *argv[])
@@ -14,8 +16,8 @@ int main(int argc, char *argv[])
         printf("  %s client <Name>\n", argv[0]);
         return 1;
     }
-
-    if (strcmp(argv[1], "server") == 0) {
+    
+        if (strcmp(argv[1], "server") == 0) {
         if (argc < 3) {
             fprintf(stderr, "Missing number of required clients.\n");
             return 1;
@@ -33,4 +35,5 @@ int main(int argc, char *argv[])
         printf("Unknown mode '%s'. Use 'server' or 'client'.\n", argv[1]);
         return 1;
     }
+    
 }

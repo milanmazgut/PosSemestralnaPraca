@@ -6,7 +6,7 @@
 #include "shop.h"
 #include <stdio.h>
 
-void game_init(game *this, int playerCount) {
+void game_init(game *gamePtr, int playerCount) {
     int CAPACITY = 12;
     int probabilities_1[] = {6, 3, 1, 1, 0, 0, 0, 1, 0};
     int probabilities_2[] = {6, 2, 2, 0, 1, 0, 0, 0, 1};
@@ -14,23 +14,30 @@ void game_init(game *this, int playerCount) {
     // RABBITS | SHEEP | PIG | COW | HORSE | SMALLDOG | BIG DOG
     int prices[] = {6, 2, 3, 2, 1, 1};
     int animalCounts[] = {10*playerCount, 5*playerCount, 4*playerCount, 2*playerCount, playerCount, playerCount - 1, playerCount/2};
-    this->playerCount = playerCount;
-    dice_init(&this->dice_1, CAPACITY, probabilities_1);
-    dice_init(&this->dice_2, CAPACITY, probabilities_2);
+    gamePtr->playerCount = playerCount;
+    dice_init(&gamePtr->dice_1, CAPACITY, probabilities_1);
+    dice_init(&gamePtr->dice_2, CAPACITY, probabilities_2);
     
-    shop_init(&this->shop, prices, animalCounts);
+    shop_init(&gamePtr->shop, prices, animalCounts);
 }
 
-void game_destroy(game *this) {
-  
-    shop_destroy(&this->shop);
-    dice_destroy(&this->dice_1);
-    dice_destroy(&this->dice_2);
+void game_destroy(game *gamePtr) {
+    
+    shop_destroy(&gamePtr->shop);
+    dice_destroy(&gamePtr->dice_1);
+    dice_destroy(&gamePtr->dice_2);
 }
 
+
+
+void player_roll_dice(game *gamePtr, player* currentPlayer, char* output) {
 void player_roll_dice(game *this, player* currentPlayer, char* outputPlayer, char* outputOthers) {
     int dice_1;
     int dice_2;
+    
+    roll_dice(&gamePtr->dice_1, &dice_1);
+    roll_dice(&gamePtr->dice_2, &dice_2);
+    snprintf(output, BUFFER_SIZE, "You dropped %s and %s \n> Nothing happens, continue playing or end your turn", animalNames[dice_1], animalNames[dice_2]);
     roll_dice(&this->dice_1, &dice_1);
     roll_dice(&this->dice_2, &dice_2);
     snprintf(outputPlayer, BUFFER_SIZE, "You dropped %s and %s \n> Nothing happens, continue playing or end your turn", animalNames[dice_1], animalNames[dice_2]);
@@ -69,20 +76,39 @@ void player_roll_dice(game *this, player* currentPlayer, char* outputPlayer, cha
         }
     }
 }
+}
 
-_Bool exchange_animal(game *this, player* currentPlayer, animalTypes in, animalTypes out) {
-    if (currentPlayer->playerAnimals[in] >= this->shop.prices[in] && this->shop.allAnimals[out] > 0) {
-        exchange_shop(&this->shop, currentPlayer, in, out);
+_Bool exchange_animal(game *gamePtr, player* currentPlayer, animalTypes in, animalTypes out) {
+    if (currentPlayer->playerAnimals[in] >= gamePtr->shop.prices[in] && gamePtr->shop.allAnimals[out] > 0) {
+        exchange_shop(&gamePtr->shop, currentPlayer, in, out);
         return true;
     } else {
         return false;
     }
 }
 
-
-
-void end_of_turn_animal_multiplication(game *this, player* currentPlayer) {
+void end_of_turn_animal_multiplication(game *gamePtr, player* currentPlayer) {
     for (int i = 0; i < ANIMAL_COUNT; i++) {
-        change_animal_ownership(&this->shop, currentPlayer, i, currentPlayer->playerAnimals[i]/2);
+        change_animal_ownership(&gamePtr->shop, currentPlayer, i, currentPlayer->playerAnimals[i]/2);
     }
 }
+//vracia vo forme zviera cena
+int** view_shop(game *gamePtr) {
+    int** shop_cpy = malloc(sizeof(int*) * FOX);
+    if(!shop_cpy) {
+        return NULL;
+    }
+    for(int i = 0; i < FOX; ++i) {
+        shop_cpy[i] = malloc(sizeof(int) * 2);
+        if(!shop_cpy[i]) {
+            for(int j = 0; j < i; ++j) {
+                free(shop_cpy[j]);
+            }
+            free(shop_cpy);
+            return NULL;
+        }
+        shop_cpy[i][0] = gamePtr->shop.allAnimals[i];
+        shop_cpy[i][1] = gamePtr->shop.prices[i];
+    }
+}
+

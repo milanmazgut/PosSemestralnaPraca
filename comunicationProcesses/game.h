@@ -30,12 +30,9 @@ typedef struct syn_game {
 
 void game_init(game* gamePtr, int playerCount);
 void game_destroy(game *gamePtr);
-void player_roll_dice(game *gamePtr, player* currentPlayer, char* outputPlayer, char* outputOthers);
+void player_roll_dice(game *gamePtr, player* currentPlayer, char* output);
 _Bool exchange_animal(game *gamePtr, player* currentPlayer, animalTypes in, animalTypes out);
 void end_of_turn_animal_multiplication(game *gamePtr, player* currentPlayer);
-void syn_game_init(syn_game* gamePtr, int number_of_players);
-void syn_game_destroy(syn_game* gamePtr);
-//void syn_turn(syn_game* syn_gamePtr, int playerIndex);
-void start(int number_of_players);
+int** view_shop(game *gamePtr);
 
 #endif

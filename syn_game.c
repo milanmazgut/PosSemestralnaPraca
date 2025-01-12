@@ -38,14 +38,14 @@ void syn_shm_game_open(synchronized_game *this, shared_names *names) {
 }
 
 void syn_shm_game_close(synchronized_game *this) {
-    shm_game_close(this->game_fd_, this->game_);
+    //shm_game_close(this->game_fd_);
     if (sem_close(this->mut_pc_) == -1) {
         perror("Failed to close mut PC");
         exit(EXIT_FAILURE);
     }
 }
 
-void syn_shm_game_player_roll_dice(synchronized_game *this, player* currentPlayer, char* outputPlayer, char* outputOthers) {
+void syn_shm_game_player_roll_dice(synchronized_game *this, player* currentPlayer, const char* playerName, char* outputPlayer, char* outputOthers) {
     /*
     printf("Milan PC guru");
     fflush(stdout);
@@ -62,7 +62,7 @@ void syn_shm_game_player_roll_dice(synchronized_game *this, player* currentPlaye
     
     sem_wait(this->mut_pc_);  // Lock the semaphore
     
-    player_roll_dice(this->game_, currentPlayer, outputPlayer, outputOthers);
+    player_roll_dice(this->game_, currentPlayer, playerName, outputPlayer, outputOthers);
     
     sem_post(this->mut_pc_);
     

@@ -29,16 +29,18 @@ static void* reader_thread(void* arg) {
         if (n > 0) {
             buf[n] = '\0';
             
+            if (strncmp(buf, "shutdown",8) == 0) {
+                atomic_store(&cd->running, 0);
+                printf("Game has ended press enter to exit.\n");
+                fflush(stdout);
+                break;
+            }
+            
             printf("%s", buf);
             if (buf[n - 1] != '\n') {
                 printf("\n");
             }
             
-            
-            if (strcmp(buf, "shutdown") == 0) {
-                atomic_store(&cd->running, 0);
-                
-            }
 
             fflush(stdout);
         } 
@@ -60,7 +62,7 @@ int client_main(const char *clientName) {
     ClientData cd;
     memset(&cd, 0, sizeof(cd));
 
-    cd.running = 1;
+    atomic_init(&cd.running, 1);
     strncpy(cd.name, clientName, BUFFER_SIZE - 1);
     cd.name[BUFFER_SIZE - 1] = '\0';
 
@@ -126,7 +128,6 @@ int client_main(const char *clientName) {
     pipe_close(cd.serverFd);
     pipe_destroy(cd.pipePath);
 
-    printf("Game has ended press enter to exit.\n");
-    fflush(stdout);
+    
     return 0;
 }

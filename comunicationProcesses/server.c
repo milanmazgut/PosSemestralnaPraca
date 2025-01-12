@@ -5,6 +5,7 @@
 #include "syn_game.h"
 #include "pipe.h"
 
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -102,29 +103,33 @@ void remove_client(ServerData *sd, int idx) {
     }
 }
 
-void broadcast_msg(ServerData *sd, const char* msg) {
+void broadcast_msg(ServerData *sd, const char* msg, int* exclude) {
     for (int i = 0; i < sd->clientCount; /* i++ v cykle */ ) {
         if (!sd->clients[i].active) {
             i++;
             continue;
         }
-        if (get_active_player(sd) != &sd->clients[i].player_) {
-            ssize_t w = write(sd->clients[i].fd, msg, strlen(msg));
-            if (w < 0) {
-                if (errno == EPIPE) {
-                    printf("[SERVER] Detected client '%s' left (EPIPE on broadcast).\n", sd->clients[i].name);
-                    fflush(stdout);
+        if (exclude != NULL && &sd->clients[*exclude].player_ == &sd->clients[i].player_) {
+            i++;
+            continue;
+        }
+        
+        ssize_t w = write(sd->clients[i].fd, msg, strlen(msg));
+        if (w < 0) {
+            if (errno == EPIPE) {
+                printf("[SERVER] Detected client '%s' left (EPIPE on broadcast).\n", sd->clients[i].name);
+                fflush(stdout);
 
-                    char bc[BUFFER_SIZE*2];
-                    snprintf(bc, sizeof(bc), "[BCAST] Player '%s' disconnected.\n", sd->clients[i].name);
-                    remove_client(sd, i);
-                    broadcast_msg(sd, bc);
-                    // remove_client() presunie i na koniec ==> nerobime i++
-                    continue;
-                } else {
-                    perror("[SERVER] write(broadcast).\n");
-                }
+                char bc[BUFFER_SIZE*2];
+                snprintf(bc, sizeof(bc), "[BCAST] Player '%s' disconnected.\n", sd->clients[i].name);
+                remove_client(sd, i);
+                broadcast_msg(sd, bc, NULL);
+                // remove_client() presunie i na koniec ==> nerobime i++
+                continue;
+            } else {
+                perror("[SERVER] write(broadcast).\n");
             }
+        
         }
         i++;
     }
@@ -145,7 +150,7 @@ void send_to_index(ServerData *sd, int idx, const char* msg) {
             snprintf(bc, sizeof(bc), "[BCAST] Player '%s' disconnected.\n", sd->clients[idx].name);
 
             remove_client(sd, idx);
-            broadcast_msg(sd, bc);
+            broadcast_msg(sd, bc, NULL);
         } else {
             perror("[SERVER] write(send_to_index).\n");
         }
@@ -166,6 +171,15 @@ const char* get_active_name(ServerData *sd) {
         return "none";
     }
     return sd->clients[sd->activeIndex].name;
+}
+
+int get_index_from_name(ServerData *sd, const char* name) {
+    for (int i; i < sd->clientCount; i++) {
+        if (strcmp(name, sd->clients[i].name) == 0) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 int get_animal_type(const char *animalName) {
@@ -218,6 +232,7 @@ void perform_exchange(ServerData *sd, const char *animalIn, const char *animalOu
         _Bool success = syn_shm_game_exchange_animal(&sd->syn_game, get_active_player(sd), inType, outType);
         if (success) {
             snprintf(output, BUFFER_SIZE, "Animals have been succesfuly changed\n");
+
         }
         else {
             snprintf(output, BUFFER_SIZE, "There was an error while exchanging animals.\n");
@@ -230,7 +245,7 @@ void perform_exchange(ServerData *sd, const char *animalIn, const char *animalOu
 void print_player_inventory(ServerData* sd, int playerIndex, char* output) {
     int* inventory = syn_inventory_look(sd, playerIndex);
     int offset = 0; // Keeps track of the current position in the output buffer
-    if (get_active_player(sd)->playerIndex == playerIndex) {
+    if (sd->activeIndex == playerIndex) {
         offset += snprintf(output + offset, BUFFER_SIZE*2 - offset, "You own these animals:\n");
     } else {
         offset += snprintf(output + offset, BUFFER_SIZE*2 - offset, "Player %s owns these animals:\n", sd->clients[playerIndex].name);
@@ -242,8 +257,9 @@ void print_player_inventory(ServerData* sd, int playerIndex, char* output) {
     }
 }
 
-void print_shop_prices(game* game, char* output) {
-    int* prices = view_shop(game)[1];
+void print_shop_prices(ServerData *sd, char* output) {
+    int* prices = syn_shm_game_view_shop(&sd->syn_game)[1];
+    
     int offset = 0;
     offset += snprintf(output + offset, BUFFER_SIZE*2 - offset, "Shop prices for animal exchange (Both ways):\n");
     
@@ -255,8 +271,8 @@ void print_shop_prices(game* game, char* output) {
 
 }
 
-void print_shop_inventory(game* game, char* output) {
-    int* inventory = view_shop(game)[0];
+void print_shop_inventory(ServerData *sd, char* output) {
+    int* inventory = syn_shm_game_view_shop(&sd->syn_game)[0];
     int offset = 0;
     offset += snprintf(output + offset, BUFFER_SIZE*2 - offset, "Animals available in shop:\n");
 
@@ -275,8 +291,7 @@ int check_action_count(ServerData *sd, int index) { //returns 1 if player can us
     sd->clients[sd->activeIndex].performedAction = 1;
     return 1;
 }
-
-bool check_victory(ServerData *sd) {
+_Bool check_victory(ServerData *sd) { 
     for (int i = 0; i < SMALL_DOG; i++) {
         if (get_active_player(sd)->playerAnimals[i] == 0) {
             return false;
@@ -284,6 +299,14 @@ bool check_victory(ServerData *sd) {
     }
     return true;
 }
+
+_Bool syn_check_victory(ServerData *sd) {
+    pthread_mutex_lock(&sd->mut);
+    _Bool success = check_victory(sd);
+    pthread_mutex_unlock(&sd->mut);
+    return success;
+}
+
 
 player* get_active_player(ServerData *sd) {
     return &sd->clients[sd->activeIndex].player_;
@@ -348,23 +371,24 @@ int server_main(int requiredNumberOfPlayers)
                 continue;
             }
         
-            if (strcmp(cmd, "join") == 0) {
+            if (strcmp(cmd, "join") == 0 && !initialized) {
                 char msg[BUFFER_SIZE*2];
                 snprintf(msg, sizeof(msg), "You have successfully joined the game. Players joined: %d/%d.\n", sd.clientCount, requiredCount);
                 send_to_index(&sd,idx,msg);
                 if (sd.clientCount < requiredCount) {
                     char bc[BUFFER_SIZE*2];
                     snprintf(bc, sizeof(bc), "Player %s joined. Waiting for all players %d/%d.\n",cname, sd.clientCount, requiredCount);
-                    broadcast_msg(&sd, bc);
+                    broadcast_msg(&sd, bc, &idx);
                 } else {
                     char bc[BUFFER_SIZE*2];
-                    send_to_index(&sd, idx, "Game is starting.\n");
+                    send_to_index(&sd, idx, "> Game is starting.\n");
                     snprintf(bc, sizeof(bc), "Player %s joined. Game is starting for %d players.\n", cname, sd.clientCount);
-                    broadcast_msg(&sd, bc); //TODO exclude 
+                    broadcast_msg(&sd, bc, &idx);
                     
                     if (!initialized) {
                         syn_shm_game_init(&sd.syn_game, requiredCount ,&sd.names);
                         initialized = true;
+                        send_to_index(&sd, sd.activeIndex, "It is your turn.");
                     }
                 } 
                 continue;
@@ -375,44 +399,77 @@ int server_main(int requiredNumberOfPlayers)
                 remove_client(&sd, idx);
                 char bc[BUFFER_SIZE*2];
                 snprintf(bc, sizeof(bc), "[BCAST] Player '%s' left the game.\n", cname);
-                broadcast_msg(&sd, bc);
+                broadcast_msg(&sd, bc, &idx);
                 continue;
             }
 
             if (strcmp(cmd, "shutdown") == 0) {
-                    send_to_index(&sd, idx, "[SERVER] Shutting down...\n");
-                    broadcast_msg(&sd, "[BCAST] *** SERVER shutting down ***\n");
-                    broadcast_msg(&sd, "shutdown");
+                    broadcast_msg(&sd, "[BCAST] *** SERVER shutting down ***\n", NULL);
+                    broadcast_msg(&sd, "shutdown", NULL);
                     running = false;
             }
             
-            if (idx != sd.activeIndex) {
-                char waitMsg[BUFFER_SIZE*2];
-                snprintf(waitMsg, sizeof(waitMsg), "[SERVER] Wait your turn. Current player: %s\n", get_active_name(&sd));
-                send_to_index(&sd, idx, waitMsg);
-                continue;
-            }
-            
             if (initialized) {
+
+                if (strcmp(cmd, "inventory") == 0) {
+                    sscanf(buffer, "%*s %*s %s", parama);
+                    char msg[BUFFER_SIZE];
+                    if (strcmp(parama , "") == 0) {
+                        print_player_inventory(&sd, idx, msg);
+                        send_to_index(&sd, idx, msg);
+                        continue;
+                    }
+
+                    int index = get_index_from_name(&sd, parama); 
+                    if (index == -1) {
+                        send_to_index(&sd, idx, "Wrong players name\n");
+                        continue;
+                    }
+
+                    print_player_inventory(&sd, index, msg);   
+                    send_to_index(&sd, idx, msg);
+                    continue;
+                }
+
+                if (strcmp(cmd, "shop") == 0) {
+                    sscanf(buffer, "%*s %*s %s", parama);
+                    char msg[BUFFER_SIZE];
+                    if (strcmp(parama , "") == 0) {
+                        send_to_index(&sd, idx, "Type shop prices or shop inventory");
+                        continue;
+                    }
+                    if (strcmp(parama , "prices") == 0) {
+                        print_shop_prices(&sd,msg);
+                    } else if (strcmp(parama , "inventory") == 0) {
+                        print_shop_inventory(&sd,msg);
+                    }
+                    send_to_index(&sd, idx, msg);
+                    continue;
+                }
+
+                if (idx != sd.activeIndex) {
+                    char waitMsg[BUFFER_SIZE*2];
+                    snprintf(waitMsg, sizeof(waitMsg), "[SERVER] Wait your turn. Current player: %s\n", get_active_name(&sd));
+                    send_to_index(&sd, idx, waitMsg);
+                    continue;
+                }
+                
                 if (strcmp(cmd, "roll") == 0 && check_action_count(&sd, idx)) {
                     char msg[BUFFER_SIZE*2];
-                    char msgOthers[BUFFER_SIZE*2];
-                    syn_shm_game_player_roll_dice(&sd.syn_game, get_active_player(&sd), msg, msgOthers);
-                    send_to_index(&sd, idx, msg);
                     char bc[BUFFER_SIZE*2];
-                    //obsahuje player_roll_dice ktory tu bol pred tym
-                    snprintf(bc, sizeof(bc), "Player %s performed a roll.\n", cname);
-                    broadcast_msg(&sd, bc);
+                    syn_shm_game_player_roll_dice(&sd.syn_game, get_active_player(&sd), msg, bc);
+                    send_to_index(&sd, idx, msg);
+                    broadcast_msg(&sd, bc, &idx);
                     continue;
                 }
 
                 else if (strcmp(cmd, "exchange") == 0) {
                     sscanf(buffer, "%*s %*s %s %s", parama, paramb);
                     char msg[BUFFER_SIZE];
-                    perform_exchange(&sd, parama, paramb, msg);
-                    send_to_index(&sd, idx, msg);
                     // char bc[BUFFER_SIZE*2];
-                    // broadcast_msg(&sd, bc);
+                    perform_exchange(&sd, parama, paramb, msg); //bc 
+                    send_to_index(&sd, idx, msg);
+                    // broadcast_msg(&sd, bc, &idx);
                     continue;
                 
                 }
@@ -420,28 +477,24 @@ int server_main(int requiredNumberOfPlayers)
                 else if (strcmp(cmd, "end") == 0) {
                     if (check_victory(&sd)) {
                         char bc[BUFFER_SIZE*2];
-                        snprintf(bc, sizeof(bc), "[BCAST] Player '%s' won the game!\n", cname);
-                        broadcast_msg(&sd, bc);
+                        snprintf(bc, sizeof(bc), "[BCAST] Player %s won the game!\n", cname);
+                        broadcast_msg(&sd, bc, &idx);
                         send_to_index(&sd, idx, "You have won the game!!!");
-                        broadcast_msg(&sd, "shutdown");
+                        broadcast_msg(&sd, "shutdown", NULL);
                         running = false;
                         continue;
                     }
                     char bc[BUFFER_SIZE*2];
-                    snprintf(bc, sizeof(bc), "[BCAST] Player '%s' ended turn.\n", cname);
-                    broadcast_msg(&sd, bc);
+                    snprintf(bc, sizeof(bc), "[BCAST] Player %s ended turn.\n", cname);
+                    broadcast_msg(&sd, bc, &idx);
                     next_turn(&sd);
-                    send_to_index(&sd, idx, "Now it is your turn "); //TODO vsetky mozne komandy
+                    send_to_index(&sd, sd.activeIndex, "Now it is your turn write help to see all commands.\n");
                     snprintf(bc, sizeof(bc), "[BCAST] Now it is '%s' turn.\n", get_active_name(&sd));
-                    broadcast_msg(&sd, bc);
+                    broadcast_msg(&sd, bc, &sd.activeIndex);
                     sd.clients[sd.activeIndex].performedAction = 0;
                     continue;
                 }
                 
-                else if (strcmp(cmd, "inventory") == 0) {
-                    //TODO show player inventory functionality
-                    continue;
-                }
                 else {
                     char resp[BUFFER_SIZE*2];
                     snprintf(resp, sizeof(resp), "[SERVER] Unknown command: %s\n", cmd);

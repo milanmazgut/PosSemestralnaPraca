@@ -32,6 +32,7 @@ void exchange_shop(shop *this, player* player, animalTypes in, animalTypes out) 
         change_animal_ownership(this, player, out, this->prices[out]); 
         printf("Player have exchanged %s {%d} for %s {%d}.\n", animalNames[in], 1, animalNames[out], this->prices[out]);
     }
+    fflush(stdout);
 }
 void shop_destroy(shop* this) {
     free(this->prices);

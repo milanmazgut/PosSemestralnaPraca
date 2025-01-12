@@ -70,8 +70,9 @@ void syn_shm_game_player_roll_dice(synchronized_game *this, player* currentPlaye
 
 _Bool syn_shm_game_exchange_animal(synchronized_game *this, player* currentPlayer, animalTypes in, animalTypes out) {
     sem_wait(this->mut_pc_);
-    exchange_animal(this->game_, currentPlayer, in, out);
+    _Bool success = exchange_animal(this->game_, currentPlayer, in, out);
     sem_post(this->mut_pc_);
+    return success;
 }
 
 void syn_shm_game_end_of_turn_animal_multiplication(synchronized_game *this, player* currentPlayer) {

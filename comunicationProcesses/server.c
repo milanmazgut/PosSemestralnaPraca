@@ -33,7 +33,7 @@ int add_client(ServerData *sd, const char* name) {
     strncpy(client->name, name, BUFFER_SIZE - 1);
     client->name[BUFFER_SIZE - 1] = '\0';
 
-    player_init(&client->player_, sd->clientCount);
+    player_init(&client->player_, sd->clientCount, name);
 
     snprintf(client->pipe_path, sizeof(client->pipe_path), "client_%s", name);
 
@@ -141,6 +141,7 @@ void next_turn(ServerData *sd) {
         sd->activeIndex = -1;
         return;
     }
+    syn_shm_game_end_of_turn_animal_multiplication(sd->syn_game_->game_, get_active_player(sd));
     sd->activeIndex = (sd->activeIndex + 1) % sd->clientCount;
 }
 
@@ -160,7 +161,7 @@ int get_animal_type(const char *animalName) {
     return -1;
 }
 
-void perform_exchange(game *game, ServerData *sd, const char *animalIn, const char *animalOut, char * output) {
+void perform_exchange(ServerData *sd, const char *animalIn, const char *animalOut, char * output) {
     int inType = get_animal_type(animalIn);
     int outType = get_animal_type(animalOut);
 
@@ -178,7 +179,7 @@ void perform_exchange(game *game, ServerData *sd, const char *animalIn, const ch
             return;
         }
 
-        _Bool success = exchange_animal(game, get_active_player(sd), inType, outType);
+        _Bool success = syn_shm_game_exchange_animal(sd->syn_game_, get_active_player(sd), inType, outType);
         if (success) {
             snprintf(output, BUFFER_SIZE, "Animals have been succesfuly changed\n");
         }
@@ -187,6 +188,44 @@ void perform_exchange(game *game, ServerData *sd, const char *animalIn, const ch
         }
     } else {
         snprintf(output, BUFFER_SIZE, "Invalid exchange.\n");
+    }
+}
+
+void print_player_inventory(ServerData* sd, int playerIndex, char* output) {
+    int* inventory = syn_inventory_look(sd, playerIndex);
+    int offset = 0; // Keeps track of the current position in the output buffer
+    if (get_active_player(sd)->playerIndex == playerIndex) {
+        offset += snprintf(output + offset, BUFFER_SIZE*2 - offset, "You own these animals:\n");
+    } else {
+        offset += snprintf(output + offset, BUFFER_SIZE*2 - offset, "Player %s owns these animals:\n", sd->clients[playerIndex].name);
+    }
+
+    // Append animal counts
+    for (int i = 0; i < FOX; i++) {
+        offset += snprintf(output + offset, BUFFER_SIZE*2 - offset, "%s: %d\n", animalNames[i], inventory[i]);
+    }
+}
+
+void print_shop_prices(game* game, char* output) {
+    int* prices = view_shop(game)[1];
+    int offset = 0;
+    offset += snprintf(output + offset, BUFFER_SIZE*2 - offset, "Shop prices for animal exchange (Both ways):\n");
+    
+    for (int i = 0; i < 4; i++) {
+        offset += snprintf(output + offset, BUFFER_SIZE*2 - offset, "%d %s for %d %s", prices[i], animalNames[i], 1, animalNames[i]);
+    }
+    offset += snprintf(output + offset, BUFFER_SIZE*2 - offset, "%d %s for %d %s", prices[4], animalNames[SHEEP], 1, animalNames[SMALL_DOG]);
+    offset += snprintf(output + offset, BUFFER_SIZE*2 - offset, "%d %s for %d %s", prices[5], animalNames[COW], 1, animalNames[BIG_DOG]);
+
+}
+
+void print_shop_inventory(game* game, char* output) {
+    int* inventory = view_shop(game)[0];
+    int offset = 0;
+    offset += snprintf(output + offset, BUFFER_SIZE*2 - offset, "Animals available in shop:\n");
+
+    for (int i = 0; i < FOX; i++) {
+        offset += snprintf(output + offset, BUFFER_SIZE*2 - offset, "%s: %d\n", animalNames[i], inventory[i]);
     }
 }
 
@@ -315,7 +354,8 @@ int server_main(int requiredNumberOfPlayers)
             if (initialized) {
                 if (strcmp(cmd, "roll") == 0 && check_action_count(&sd, idx)) {
                     char msg[BUFFER_SIZE*2];
-                    player_roll_dice(g, get_active_player(&sd), msg);
+                    char msgOthers[BUFFER_SIZE*2];
+                    player_roll_dice(g, get_active_player(&sd), msg, msgOthers);
                     send_to_index(&sd, idx, msg);
                     char bc[BUFFER_SIZE*2];
                     snprintf(bc, sizeof(bc), "Player %s performed a roll.\n", cname);
@@ -326,7 +366,7 @@ int server_main(int requiredNumberOfPlayers)
                 else if (strcmp(cmd, "exchange") == 0) {
                     sscanf(buffer, "%*s %*s %s %s", parama, paramb);
                     char msg[BUFFER_SIZE];
-                    perform_exchange(g, &sd, parama, paramb, msg);
+                    perform_exchange( &sd, parama, paramb, msg);
                     send_to_index(&sd, idx, msg);
                     // char bc[BUFFER_SIZE*2];
                     // broadcast_msg(&sd, bc);

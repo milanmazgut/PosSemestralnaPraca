@@ -9,9 +9,10 @@
 typedef struct player{
     int playerIndex;
     int playerAnimals[ANIMAL_COUNT];
+    const char* playerName;
 } player;
 
-void player_init(player* playerPtr, int playerIndex);
+void player_init(player* playerPtr, int playerIndex, const char* name);
 void player_destroy(player* playerPtr);
 
 #endif

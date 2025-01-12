@@ -74,8 +74,14 @@ void player_roll_dice(game *this, player* currentPlayer, const char* playerName,
 }
 
 _Bool exchange_animal(game *gamePtr, player* currentPlayer, animalTypes in, animalTypes out) {
-    if (currentPlayer->playerAnimals[in] >= gamePtr->shop.prices[in] && gamePtr->shop.allAnimals[out] > 0) {
-        exchange_shop(&gamePtr->shop, currentPlayer, in, out);
+    int price = in;
+    _Bool dog = false;
+    if (out == SMALL_DOG || out == BIG_DOG) {
+        price = out - 1;
+        dog = true;
+    }
+    if (currentPlayer->playerAnimals[in] >= gamePtr->shop.prices[price] && gamePtr->shop.allAnimals[out] > 0) {
+        exchange_shop(&gamePtr->shop, currentPlayer, in, out, dog);
         return true;
     } else {
         return false;

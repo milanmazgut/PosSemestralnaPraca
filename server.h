@@ -43,7 +43,7 @@ void print_shop_prices(ServerData *sd, char* output);
 const char* get_active_name(ServerData *sd);
 int get_index_from_name(ServerData *sd, char* name);
 int get_animal_type(const char *animalName);
-void perform_exchange(ServerData *sd, const char *animalIn, const char *animalOut, char * output);
+void perform_exchange(ServerData *sd, const char *animalIn, const char *animalOut, char *output, char *outputOthers);
 int check_action_count(ServerData *sd, int index);
 player* get_active_player(ServerData *sd);
 int* inventory_look(ServerData *sd, int playerIndex);

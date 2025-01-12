@@ -22,15 +22,20 @@ void change_animal_ownership(shop* this, player* currentPlayer, int type, int co
     }
 }
 
-void exchange_shop(shop *this, player* player, animalTypes in, animalTypes out) {
+void exchange_shop(shop *this, player* player, animalTypes in, animalTypes out, _Bool dog) {
+    int price = in;
+    if (dog) {
+        price = out - 1;
+    }
     if (in < out) {
-        change_animal_ownership(this, player, in, -this->prices[in]);
+        change_animal_ownership(this, player, in, -this->prices[price]);
         change_animal_ownership(this, player, out, 1);
-        printf("Player have exchanged %s {%d} for %s {%d}.\n", animalNames[in], this->prices[in], animalNames[out], 1);
-    } else {
+        printf("Player have exchanged %s {%d} for %s {%d}.\n", animalNames[in], this->prices[price], animalNames[out], 1);
+    } else if (out < in && !dog) {
+        price = out;
         change_animal_ownership(this, player, in, -1);
         change_animal_ownership(this, player, out, this->prices[out]); 
-        printf("Player have exchanged %s {%d} for %s {%d}.\n", animalNames[in], 1, animalNames[out], this->prices[out]);
+        printf("Player have exchanged %s {%d} for %s {%d}.\n", animalNames[in], 1, animalNames[out], this->prices[price]);
     }
     fflush(stdout);
 }

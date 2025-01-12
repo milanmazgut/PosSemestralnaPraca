@@ -6,8 +6,8 @@ const char *animalNames[] = {
     [PIG] = "pig",
     [COW] = "cow",
     [HORSE] = "horse",
-    [SMALL_DOG] = "small dog",
-    [BIG_DOG] = "big dog",
+    [SMALL_DOG] = "smalldog",
+    [BIG_DOG] = "bigdog",
     [FOX] = "fox",
     [WOLF] = "wolf"
 };

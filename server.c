@@ -212,20 +212,20 @@ int* syn_inventory_look(ServerData* sd, int playerIndex) {
     return ar;
 }
 
-void perform_exchange(ServerData *sd, const char *animalIn, const char *animalOut, char * output) {
+void perform_exchange(ServerData *sd, const char *animalIn, const char *animalOut, char * output, char *outputOthers) {
     int inType = get_animal_type(animalIn);
     int outType = get_animal_type(animalOut);
-
+    snprintf(outputOthers, BUFFER_SIZE, "");
     if (inType == -1 || outType == -1) {
         snprintf(output, BUFFER_SIZE, "Invalid animal names provided.\n");
         return;
     }
     if ((inType - outType == 1 || inType - outType == -1) || (inType == 1 && outType == 5 || inType == 3 && outType == 6)) {
 
-        if (inType == 1 && outType == 5 && get_active_player(sd)->playerAnimals[SMALL_DOG] != 0) {
+        if ((inType == SHEEP && outType == SMALL_DOG) && get_active_player(sd)->playerAnimals[SMALL_DOG] != 0) {
             snprintf(output, BUFFER_SIZE, "Cannot have more than one small dog.\n");
             return;
-        } else if (inType == 3 && outType == 6 && get_active_player(sd)->playerAnimals[BIG_DOG] != 0) {
+        } else if ((inType == COW && outType == BIG_DOG) && get_active_player(sd)->playerAnimals[BIG_DOG] != 0) {
             snprintf(output, BUFFER_SIZE, "Cannot have more than one big dog.\n");
             return;
         }
@@ -233,10 +233,11 @@ void perform_exchange(ServerData *sd, const char *animalIn, const char *animalOu
         _Bool success = syn_shm_game_exchange_animal(&sd->syn_game, get_active_player(sd), inType, outType);
         if (success) {
             snprintf(output, BUFFER_SIZE, "Animals have been succesfuly changed\n");
-
+            snprintf(outputOthers, BUFFER_SIZE, "Player %s has exchanged %s for %s in shop.", get_active_name(sd), animalIn , animalOut);
         }
         else {
             snprintf(output, BUFFER_SIZE, "There was an error while exchanging animals.\n");
+            
         }
     } else {
         snprintf(output, BUFFER_SIZE, "Invalid exchange.\n");
@@ -300,7 +301,6 @@ int check_action_count(ServerData *sd, int index) { //returns 1 if player can us
         send_to_index(sd, index, noActionMsg);
         return 0;
         }
-    sd->clients[sd->activeIndex].performedAction = 1;
     return 1;
 }
 _Bool check_victory(ServerData *sd) { 
@@ -401,7 +401,7 @@ int server_main(int requiredNumberOfPlayers)
                     if (!initialized) {
                         syn_shm_game_init(&sd.syn_game, requiredCount ,&sd.names);
                         initialized = true;
-                        send_to_index(&sd, sd.activeIndex, "It is your turn.");
+                        send_to_index(&sd, sd.activeIndex, "> It is your turn.");
                     }
                 } 
                 continue;
@@ -468,6 +468,7 @@ int server_main(int requiredNumberOfPlayers)
                 
                 if (strcmp(cmd, "roll") == 0 ) {
                     if (check_action_count(&sd, idx)) {
+                        sd.clients[sd.activeIndex].performedAction = 1;
                         char msg[BUFFER_SIZE*2];
                         char bc[BUFFER_SIZE*2];
                         syn_shm_game_player_roll_dice(&sd.syn_game, get_active_player(&sd),get_active_name(&sd) , msg, bc);
@@ -480,33 +481,38 @@ int server_main(int requiredNumberOfPlayers)
                 else if (strcmp(cmd, "exchange") == 0) {
                     sscanf(buffer, "%*s %*s %s %s", parama, paramb);
                     char msg[BUFFER_SIZE];
-                    // char bc[BUFFER_SIZE*2];
-                    perform_exchange(&sd, parama, paramb, msg); //bc 
+                    char bc[BUFFER_SIZE*2];
+                    perform_exchange(&sd, parama, paramb, msg, bc); //bc 
                     send_to_index(&sd, idx, msg);
-                    // broadcast_msg(&sd, bc, &idx);
+                    broadcast_msg(&sd, bc, &idx);
                     continue;
                 
                 }
 
                 else if (strcmp(cmd, "end") == 0) {
-                    if (check_victory(&sd)) {
+                    if (!check_action_count(&sd, idx)) {
+                        if (check_victory(&sd)) {
+                            char bc[BUFFER_SIZE*2];
+                            snprintf(bc, sizeof(bc), "[BCAST] Player %s won the game!\n", cname);
+                            broadcast_msg(&sd, bc, &idx);
+                            send_to_index(&sd, idx, "You have won the game!!!\n");
+                            broadcast_msg(&sd, "shutdown", NULL);
+                            running = false;
+                            continue;
+                        }
                         char bc[BUFFER_SIZE*2];
-                        snprintf(bc, sizeof(bc), "[BCAST] Player %s won the game!\n", cname);
+                        snprintf(bc, sizeof(bc), "[BCAST] Player %s ended turn.\n", cname);
                         broadcast_msg(&sd, bc, &idx);
-                        send_to_index(&sd, idx, "You have won the game!!!\n");
-                        broadcast_msg(&sd, "shutdown", NULL);
-                        running = false;
+                        next_turn(&sd);
+                        send_to_index(&sd, sd.activeIndex, "> Now it is your turn write help to see all commands.\n");
+                        snprintf(bc, sizeof(bc), "[BCAST] Now it is '%s' turn.\n", get_active_name(&sd));
+                        broadcast_msg(&sd, bc, &sd.activeIndex);
+                        sd.clients[sd.activeIndex].performedAction = 0;
+                        continue;
+                    } else {
+                        send_to_index(&sd, sd.activeIndex, "> You have to perform roll before you can end your turn\n");
                         continue;
                     }
-                    char bc[BUFFER_SIZE*2];
-                    snprintf(bc, sizeof(bc), "[BCAST] Player %s ended turn.\n", cname);
-                    broadcast_msg(&sd, bc, &idx);
-                    next_turn(&sd);
-                    send_to_index(&sd, sd.activeIndex, "Now it is your turn write help to see all commands.\n");
-                    snprintf(bc, sizeof(bc), "[BCAST] Now it is '%s' turn.\n", get_active_name(&sd));
-                    broadcast_msg(&sd, bc, &sd.activeIndex);
-                    sd.clients[sd.activeIndex].performedAction = 0;
-                    continue;
                 }
                 
                 else {
